@@ -1,0 +1,9 @@
+2025-06-15 17:37:01,545 | main | INFO | logger.py:63 | 🔥 KENYA CLINICAL REASONING CHALLENGE - DOMINATION MODE
+2025-06-15 17:37:01,545 | main | INFO | logger.py:63 | ======================================================================
+2025-06-15 17:37:01,698 | main | ERROR | logger.py:76 | CRITICAL FAILURE in data analysis
+Traceback (most recent call last):
+  File "C:\Users\Mecha Mino 5 Outlook\Downloads\kenya-clinical-reasoning-challenge\main.py", line 46, in main
+    analysis_results = quick_data_analysis(train_path)
+  File "C:\Users\Mecha Mino 5 Outlook\Downloads\kenya-clinical-reasoning-challenge\core\data_processing.py", line 255, in quick_data_analysis
+    logger.data("quick_analysis", analysis)
+AttributeError: 'CompetitionLogger' object has no attribute 'data'

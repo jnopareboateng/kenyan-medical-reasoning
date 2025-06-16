@@ -1,0 +1,12 @@
+2025-06-15 17:43:55,725 | expert_analysis | INFO | logger.py:63 | Initialized Expert Response Analyzer
+2025-06-15 17:43:55,725 | expert_analysis | INFO | logger.py:63 | 🔥 STARTING COMPLETE EXPERT ANALYSIS
+2025-06-15 17:43:55,726 | expert_analysis | INFO | logger.py:63 | Analyzing response structure patterns
+2025-06-15 17:43:55,896 | expert_analysis | INFO | logger.py:63 | Extracting medical vocabulary patterns
+2025-06-15 17:43:55,942 | expert_analysis | INFO | logger.py:63 | Analyzing clinical reasoning flow
+2025-06-15 17:43:55,965 | expert_analysis | INFO | logger.py:63 | Analyzing context adaptation patterns
+2025-06-15 17:43:55,999 | expert_analysis | INFO | logger.py:63 | Generating response templates
+2025-06-15 17:43:56,035 | expert_analysis | INFO | logger.py:63 | Expert analysis complete - results saved
+2025-06-15 17:43:56,035 | expert_analysis | INFO | logger.py:63 | Key insights:
+2025-06-15 17:43:56,035 | expert_analysis | INFO | logger.py:63 | - 77.0% include management
+2025-06-15 17:43:56,035 | expert_analysis | INFO | logger.py:63 | - 69.0% mention investigations
+2025-06-15 17:43:56,035 | expert_analysis | INFO | logger.py:63 | - 0.0% use structured format

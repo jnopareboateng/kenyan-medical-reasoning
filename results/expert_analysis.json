@@ -1,0 +1,199 @@
+{
+  "Nursing Competency": {
+    "avg_length": 16.81,
+    "median_length": 13.0,
+    "length_std": 5.964296444694924,
+    "response_count": 400,
+    "common_phrases": [
+      "emergency"
+    ],
+    "clinical_structure": {
+      "has_assessment": 0.0,
+      "has_management": 0.0,
+      "has_monitoring": 0.0,
+      "has_education": 0.0,
+      "uses_numbered_list": 0.0,
+      "mentions_vitals": 0.0,
+      "includes_medications": 0.0,
+      "mentions_referral": 0.0
+    }
+  },
+  "Clinical Panel": {
+    "avg_length": 15.0375,
+    "median_length": 17.0,
+    "length_std": 6.496275682601602,
+    "response_count": 400,
+    "common_phrases": [],
+    "clinical_structure": {
+      "has_assessment": 0.0,
+      "has_management": 0.0,
+      "has_monitoring": 0.0,
+      "has_education": 0.0,
+      "uses_numbered_list": 0.0,
+      "mentions_vitals": 0.0,
+      "includes_medications": 0.0,
+      "mentions_referral": 0.0
+    }
+  },
+  "Clinician": {
+    "avg_length": 695.975,
+    "median_length": 650.0,
+    "length_std": 285.79966409180304,
+    "response_count": 400,
+    "common_phrases": [
+      "monitor",
+      [
+        "patient",
+        "should"
+      ],
+      "give",
+      "immediate",
+      "refer",
+      "administer",
+      [
+        "patient",
+        "requires"
+      ],
+      "assess"
+    ],
+    "clinical_structure": {
+      "has_assessment": 0.63,
+      "has_management": 0.7925,
+      "has_monitoring": 0.4,
+      "has_education": 0.0525,
+      "uses_numbered_list": 0.96,
+      "mentions_vitals": 0.4975,
+      "includes_medications": 0.1975,
+      "mentions_referral": 0.3025
+    }
+  },
+  "GPT4.0": {
+    "avg_length": 4999.035,
+    "median_length": 4939.0,
+    "length_std": 1358.9805735451787,
+    "response_count": 400,
+    "common_phrases": [
+      [
+        "child",
+        "should"
+      ],
+      "monitor",
+      "provide",
+      [
+        "patient",
+        "needs"
+      ],
+      [
+        "patient",
+        "should"
+      ],
+      "consult",
+      "immediate",
+      "refer",
+      "administer",
+      [
+        "patient",
+        "requires"
+      ],
+      "contact",
+      "assess"
+    ],
+    "clinical_structure": {
+      "has_assessment": 0.95,
+      "has_management": 0.9725,
+      "has_monitoring": 0.93,
+      "has_education": 0.39,
+      "uses_numbered_list": 0.995,
+      "mentions_vitals": 0.57,
+      "includes_medications": 0.4925,
+      "mentions_referral": 0.645
+    }
+  },
+  "LLAMA": {
+    "avg_length": 2268.62,
+    "median_length": 2250.0,
+    "length_std": 349.97080522706204,
+    "response_count": 400,
+    "common_phrases": [
+      "monitor",
+      "provide",
+      [
+        "patient",
+        "needs"
+      ],
+      [
+        "patient",
+        "should"
+      ],
+      "urgent",
+      "consult",
+      "immediate",
+      "refer",
+      "evaluate",
+      [
+        "patient",
+        "requires"
+      ],
+      "administer",
+      "contact",
+      [
+        "infant",
+        "should"
+      ],
+      "assess"
+    ],
+    "clinical_structure": {
+      "has_assessment": 0.815,
+      "has_management": 0.9625,
+      "has_monitoring": 0.915,
+      "has_education": 0.29,
+      "uses_numbered_list": 0.99,
+      "mentions_vitals": 0.3725,
+      "includes_medications": 0.3725,
+      "mentions_referral": 0.6325
+    }
+  },
+  "GEMINI": {
+    "avg_length": 3671.28,
+    "median_length": 3783.5,
+    "length_std": 696.6745403255702,
+    "response_count": 400,
+    "common_phrases": [
+      "provide",
+      [
+        "patient",
+        "needs"
+      ],
+      [
+        "patient",
+        "should"
+      ],
+      "emergency",
+      "consult",
+      "immediate",
+      "refer",
+      "administer",
+      [
+        "patient",
+        "requires"
+      ],
+      "assess",
+      "contact",
+      "monitor",
+      [
+        "child",
+        "needs"
+      ]
+    ],
+    "clinical_structure": {
+      "has_assessment": 0.9675,
+      "has_management": 0.9525,
+      "has_monitoring": 0.875,
+      "has_education": 0.305,
+      "uses_numbered_list": 0.9775,
+      "mentions_vitals": 0.575,
+      "includes_medications": 0.535,
+      "mentions_referral": 0.76
+    }
+  }
+}

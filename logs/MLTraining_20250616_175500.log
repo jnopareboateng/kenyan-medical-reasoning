@@ -1,0 +1,25 @@
+2025-06-16 17:55:00,398 | MLTraining | INFO | logger.py:63 | === PRODUCTION ML PIPELINE STARTING ===
+2025-06-16 17:55:00,400 | MLTraining | INFO | logger.py:63 | Replacing template-based system with real ML model
+2025-06-16 17:55:00,401 | MLTraining | INFO | logger.py:63 | Initializing FLAN-T5-small ML pipeline...
+2025-06-16 17:55:00,404 | MLTraining | ERROR | logger.py:78 | ML Pipeline failed: 
+T5Tokenizer requires the SentencePiece library but it was not found in your environment. Checkout the instructions on the
+installation page of its repo: https://github.com/google/sentencepiece#installation and follow the ones
+that match your environment. Please note that you may need to restart your runtime after installation.
+
+2025-06-16 17:55:00,417 | MLTraining | ERROR | logger.py:78 | Traceback (most recent call last):
+  File "/mnt/c/Users/Mecha Mino 5 Outlook/Downloads/kenya-clinical-reasoning-challenge/train_production_ml.py", line 34, in main
+    pipeline = MLPipeline()
+  File "/mnt/c/Users/Mecha Mino 5 Outlook/Downloads/kenya-clinical-reasoning-challenge/core/ml_model.py", line 408, in __init__
+    self.model = ClinicalT5Model()
+  File "/mnt/c/Users/Mecha Mino 5 Outlook/Downloads/kenya-clinical-reasoning-challenge/core/ml_model.py", line 89, in __init__
+    self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+  File "/home/justjosh/anaconda3/envs/minoenv/lib/python3.9/site-packages/transformers/utils/import_utils.py", line 1690, in __getattribute__
+    requires_backends(cls, cls._backends)
+  File "/home/justjosh/anaconda3/envs/minoenv/lib/python3.9/site-packages/transformers/utils/import_utils.py", line 1678, in requires_backends
+    raise ImportError("".join(failed))
+ImportError: 
+T5Tokenizer requires the SentencePiece library but it was not found in your environment. Checkout the instructions on the
+installation page of its repo: https://github.com/google/sentencepiece#installation and follow the ones
+that match your environment. Please note that you may need to restart your runtime after installation.
+
+

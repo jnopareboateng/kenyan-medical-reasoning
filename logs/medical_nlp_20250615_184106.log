@@ -1,0 +1,4 @@
+2025-06-15 18:41:07,306 | medical_nlp | INFO | logger.py:63 | Analyzing expert response patterns
+2025-06-15 18:41:08,035 | medical_nlp | INFO | logger.py:63 | Expert response analysis complete | Data: {"models_analyzed": 6}
+2025-06-15 18:41:08,043 | medical_nlp | INFO | logger.py:63 | Initialized Medical Entity Extractor
+2025-06-15 18:41:08,046 | medical_nlp | INFO | logger.py:63 | Initialized Clinical Reasoning Engine

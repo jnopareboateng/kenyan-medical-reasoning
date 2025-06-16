@@ -1,0 +1,151 @@
+# Medical AI Competition Configuration
+# Production settings for dominating the leaderboard
+
+# Project settings
+project:
+  name: "kenya-clinical-reasoning-challenge"
+  version: "1.0.0"
+  environment: "winenv"
+  log_level: "INFO"
+
+# Data configuration
+data:
+  train_file: "train.csv"
+  test_file: "test.csv"
+  submission_file: "SampleSubmission.csv"
+  
+  # Feature engineering
+  text_columns:
+    - "Prompt"
+    - "Nursing Competency" 
+    - "Clinical Panel"
+    - "Clinician"
+    - "GPT4.0"
+    - "LLAMA"
+    - "GEMINI"
+  
+  target_column: "Clinician"
+  
+  # Medical domain features
+  medical_features:
+    - "County"
+    - "Health level"
+    - "Years of Experience"
+    - "DDX SNOMED"
+
+# Model configuration
+models:
+  # Primary approach: Medical language model
+  medical_llm:
+    base_model: "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
+    max_length: 2048
+    learning_rate: 2e-5
+    batch_size: 8
+    epochs: 5
+    warmup_steps: 500
+    
+  # Alternative: Clinical BERT
+  clinical_bert:
+    base_model: "emilyalsentzer/Bio_ClinicalBERT"
+    max_length: 1024
+    learning_rate: 3e-5
+    batch_size: 16
+    epochs: 3
+    
+  # Ensemble configuration
+  ensemble:
+    models:
+      - "medical_llm"
+      - "clinical_bert"
+    weights: [0.7, 0.3]
+    strategy: "weighted_average"
+
+# Training configuration
+training:
+  validation_split: 0.2
+  random_seed: 42
+  early_stopping_patience: 3
+  save_best_model: true
+  
+  # Cross-validation
+  cv_folds: 5
+  cv_strategy: "stratified"  # Stratify by medical specialty
+  
+  # Optimization
+  optimizer: "AdamW"
+  scheduler: "linear_warmup"
+  gradient_accumulation_steps: 2
+  max_grad_norm: 1.0
+
+# Evaluation metrics
+evaluation:
+  primary_metrics:
+    - "rouge_l"
+    - "bert_score"
+    - "medical_accuracy"
+  
+  secondary_metrics:
+    - "response_length"
+    - "clinical_completeness"
+    - "contextual_appropriateness"
+
+# Medical knowledge integration
+medical_knowledge:
+  # SNOMED CT integration
+  snomed_codes: true
+  
+  # Medical entity recognition
+  medical_ner: true
+  entities:
+    - "MEDICATION"
+    - "DISEASE" 
+    - "SYMPTOM"
+    - "PROCEDURE"
+    - "ANATOMY"
+  
+  # Clinical guidelines
+  kenyan_guidelines: true
+  
+# Text processing
+text_processing:
+  # Preprocessing
+  lowercase: false  # Preserve medical terminology case
+  remove_stopwords: false  # Medical context matters
+  lemmatization: true
+  
+  # Medical text cleaning
+  preserve_medical_terms: true
+  standardize_measurements: true
+  expand_abbreviations: true
+
+# Hardware and performance
+hardware:
+  device: "auto"  # auto-detect GPU
+  mixed_precision: true
+  dataloader_workers: 4
+  pin_memory: true
+
+# Logging and monitoring
+logging:
+  level: "INFO"
+  save_predictions: true
+  save_attention_weights: false
+  track_training_metrics: true
+
+# Competition strategy
+strategy:
+  # Response generation
+  response_style: "expert_clinician"
+  include_differential_diagnosis: true
+  include_treatment_rationale: true
+  adapt_to_facility_level: true
+  adapt_to_experience_level: true
+  
+  # Quality assurance
+  medical_validation: true
+  consistency_check: true
+  length_optimization: true
+  
+  # Submission strategy
+  ensemble_final_predictions: true
+  confidence_threshold: 0.85

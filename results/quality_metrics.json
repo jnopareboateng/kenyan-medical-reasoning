@@ -1,0 +1,9 @@
+{
+  "avg_response_length": 441.91,
+  "median_response_length": 436.5,
+  "min_length": 382,
+  "max_length": 567,
+  "target_length": 700,
+  "responses_in_target_range": 8,
+  "total_responses": 100
+}

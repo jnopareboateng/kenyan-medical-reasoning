@@ -1,0 +1,7 @@
+2025-06-15 18:37:44,899 | data_processing | INFO | logger.py:63 | Initialized MedicalDataProcessor
+2025-06-15 18:37:44,900 | data_processing | INFO | logger.py:63 | Loading training data from /mnt/c/Users/Mecha Mino 5 Outlook/Downloads/kenya-clinical-reasoning-challenge/data/train.csv
+2025-06-15 18:37:45,078 | data_processing | ERROR | logger.py:76 | Failed to load training data
+Traceback (most recent call last):
+  File "/mnt/c/Users/Mecha Mino 5 Outlook/Downloads/kenya-clinical-reasoning-challenge/core/data_processing.py", line 88, in load_training_data
+    logger.data("raw_training", {
+AttributeError: 'CompetitionLogger' object has no attribute 'data'
