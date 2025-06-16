@@ -4,12 +4,14 @@ Using FLAN-T5-small for competition-grade performance
 """
 
 import torch
+import pandas as pd
+import numpy as np
 from transformers import (
     T5ForConditionalGeneration, 
     T5Tokenizer, 
-    AdamW,
     get_linear_schedule_with_warmup
 )
+from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
