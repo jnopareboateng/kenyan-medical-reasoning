@@ -6,8 +6,8 @@ Using Microsoft's latest 3.8B parameter model with Unsloth optimization
 import torch
 import pandas as pd
 import numpy as np
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from unsloth import FastLanguageModel
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import Dataset
 from trl import SFTTrainer, SFTConfig
 import pandas as pd
