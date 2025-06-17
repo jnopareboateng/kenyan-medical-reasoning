@@ -403,7 +403,6 @@ class ClinicalT5Model:
         logger.info("Model quantized for edge deployment")
         return quantized_model
 
-
 class MLPipeline:
     """Complete ML pipeline for clinical reasoning"""
     def __init__(self):
@@ -480,7 +479,6 @@ class MLPipeline:
         
         submission_df.to_csv(filepath, index=False)
         self.logger.info(f"Submission saved to {filepath}")
-
 
 if __name__ == "__main__":
     # Quick test of the ML pipeline
