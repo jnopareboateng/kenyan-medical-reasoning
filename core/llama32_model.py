@@ -6,8 +6,8 @@ Using Meta's latest 3B parameter instruction-tuned model with Unsloth optimizati
 import torch
 import pandas as pd
 import numpy as np
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from unsloth import FastLanguageModel
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import Dataset
 from trl import SFTTrainer, SFTConfig
 import pandas as pd
