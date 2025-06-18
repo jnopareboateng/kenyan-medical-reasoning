@@ -3,10 +3,11 @@ Phi-4-mini-instruct Implementation for Clinical Response Generation
 Using Microsoft's latest 3.8B parameter model with Unsloth optimization
 """
 
-import torch
 import pandas as pd
 import numpy as np
-from unsloth import FastLanguageModel
+# from unsloth import FastLanguageModel
+from unsloth import FastLanguageModel, is_bfloat16_supported
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import Dataset
 from trl import SFTTrainer, SFTConfig
@@ -30,22 +31,45 @@ paths = get_project_paths()
 class ClinicalPhi4Model:
     """Phi-4-mini-instruct fine-tuned for clinical reasoning with Unsloth optimization"""
     
-    def __init__(self, model_name: str = "microsoft/Phi-4-mini-instruct", load_in_4bit: bool = True):
+    # Class-level model cache to prevent re-downloading
+    _model_cache = {}
+    _tokenizer_cache = {}
+    
+    def __init__(self, model_name: str = "microsoft/Phi-4-mini-instruct", load_in_4bit: bool = True, 
+                 cache_dir: str = "./models", force_download: bool = False):
         """Initialize Phi-4-mini with Unsloth for 4-bit quantization"""
         
         self.model_name = model_name
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.load_in_4bit = load_in_4bit
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
         
-        logger.info(f"Loading {model_name} with Unsloth optimization")
+        # Create cache key
+        cache_key = f"{model_name}_{load_in_4bit}"
         
+        logger.info(f"Loading {model_name} with caching optimization")
+        
+        # Check if model is already in memory cache
+        if not force_download and cache_key in self._model_cache:
+            logger.info("✅ Using cached model from memory")
+            self.model = self._model_cache[cache_key]
+            self.tokenizer = self._tokenizer_cache[cache_key]
+            return        
         # Load model with Unsloth for efficient training and inference
+        logger.info(f"Downloading/Loading from cache: {model_name}")
         self.model, self.tokenizer = FastLanguageModel.from_pretrained(
             model_name=model_name,
             max_seq_length=2048,  # Phi-4-mini supports up to 128K, but 2K is sufficient for clinical cases
             dtype=None,  # Auto-detect
             load_in_4bit=load_in_4bit,  # Use 4-bit quantization for efficiency
+            cache_dir=str(self.cache_dir),  # Use persistent cache
         )
+        
+        # Cache in memory for subsequent uses
+        self._model_cache[cache_key] = self.model
+        self._tokenizer_cache[cache_key] = self.tokenizer
+        logger.info("✅ Model cached in memory for future use")
         
         # Configure for fine-tuning with LoRA
         self.model = FastLanguageModel.get_peft_model(
@@ -263,3 +287,27 @@ class ClinicalPhi4Model:
         FastLanguageModel.for_inference(self.model)
         logger.info("Phi-4-mini model optimized for edge deployment")
         return self.model
+    
+    def cleanup_model(self):
+        """Clean up model from memory to free resources"""
+        if hasattr(self, 'model') and self.model is not None:
+            del self.model
+            self.model = None
+        if hasattr(self, 'tokenizer') and self.tokenizer is not None:
+            del self.tokenizer
+            self.tokenizer = None
+        
+        # Clear CUDA cache if available
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        logger.info("Phi-4-mini model cleaned up from memory")
+    
+    @classmethod
+    def clear_cache(cls):
+        """Clear all cached models from memory"""
+        cls._model_cache.clear()
+        cls._tokenizer_cache.clear()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        logger.info("All Phi-4 model caches cleared")
