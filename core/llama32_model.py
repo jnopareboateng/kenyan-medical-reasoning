@@ -91,7 +91,12 @@ class ClinicalLlama32Model:
         # Llama-3.2 chat template
         self.chat_template = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-You are an expert clinical practitioner specializing in healthcare delivery in Kenya. You have extensive experience working within the Kenyan healthcare system and understand the unique challenges, resource constraints, and cultural considerations. Provide detailed, evidence-based clinical assessments and management plans that are appropriate for the local context.<|eot_id|><|start_header_id|>user<|end_header_id|>
+You are an expert clinical practitioner specializing in healthcare delivery in Kenya. You have extensive experience working within the Kenyan healthcare system and understand the unique challenges, resource constraints, and cultural considerations. You think step by step internally without showing it to the user ONLY produce a final detailed, evidence-based clinical assessments and management plans that are appropriate for the local context. Your response must be EXACTLY the following structure:
+1. Assessment: [Brief summary of the presenting issue and key findings]
+2. Differential Diagnosis: [List 2-3 likely diagnoses]
+3. Immediate Management: [Detail critical interventions appropriate to the setting]
+4. Follow-up: [Outline essential monitoring and referral criteria]
+Ensure your final response is evidence-based, focused on local resource constraints, and between 650-750 characters.<|eot_id|><|start_header_id|>user<|end_header_id|>
 
 {prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
@@ -235,7 +240,13 @@ Consider resource constraints, local disease patterns, and cultural factors rele
         # Format input for chat template
         formatted_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-You are an expert clinical practitioner specializing in healthcare delivery in Kenya. You have extensive experience working within the Kenyan healthcare system and understand the unique challenges, resource constraints, and cultural considerations. Provide detailed, evidence-based clinical assessments and management plans that are appropriate for the local context.<|eot_id|><|start_header_id|>user<|end_header_id|>
+You are an expert clinical practitioner specializing in healthcare delivery in Kenya. You have extensive experience working within the Kenyan healthcare system and understand the unique challenges, resource constraints, and cultural considerations.Internally consider all necessary steps and evidence, but DO NOT output your reasoning. 
+Your final answer must strictly follow this format:
+1. ASSESSMENT: [summary]
+2. DIFFERENTIAL: [2-3 likely diagnoses]
+3. MANAGEMENT: [immediate actions]
+4. FOLLOW-UP: [monitoring/referral instructions]
+Ensure your final response is between 650-750 characters and concise.<|eot_id|><|start_header_id|>user<|end_header_id|>
 
 {input_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
 
@@ -249,7 +260,7 @@ You are an expert clinical practitioner specializing in healthcare delivery in K
             formatted_prompt,
             return_tensors="pt",
             truncation=True,
-            max_length=1536
+            max_length=2048
         ).to(self.device)
         
         # Generate response
@@ -257,7 +268,7 @@ You are an expert clinical practitioner specializing in healthcare delivery in K
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_length,
-                temperature=0.7,
+                temperature=0.4,
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
                 repetition_penalty=1.1,

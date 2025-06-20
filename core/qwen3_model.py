@@ -269,7 +269,7 @@ Ensure your final response is between 650-750 characters and concise.<|im_end|>
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_length,  # Force shorter responses
-                temperature=0.7,  # Lower for more focused output
+                temperature=0.4,  # Lower for more focused output
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
                 repetition_penalty=1.2,
