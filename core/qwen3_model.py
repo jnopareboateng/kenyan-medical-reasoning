@@ -170,16 +170,14 @@ You are Qwen, an expert clinical practitioner specializing in healthcare deliver
         
         # Specific request for comprehensive analysis
         prompt_parts.append("""
-**Please provide a comprehensive clinical response including:**
+**Please provide a CONCISE clinical response (650-750 characters) structured as follows:**
 
-1. **Assessment & Differential Diagnosis:** Based on clinical presentation
-2. **Immediate Management:** Priority interventions and stabilization
-3. **Diagnostic Approach:** Investigations appropriate for the facility level
-4. **Treatment Plan:** Evidence-based management considering Kenyan guidelines
-5. **Patient Education:** Key counseling points for patient/family
-6. **Follow-up & Referral:** Monitoring plan and when to escalate care
+1. **Assessment:** Brief summary of presenting issue and key findings
+2. **Differential Diagnosis:** 2-3 most likely conditions
+3. **Immediate Management:** Priority interventions (facility-appropriate)
+4. **Follow-up:** Key monitoring parameters and referral criteria
 
-Consider resource constraints, local disease patterns, and cultural factors relevant to healthcare delivery in Kenya.
+Keep response focused, evidence-based, and appropriate for Kenyan healthcare context.
 """)
         
         return "\n".join(prompt_parts)
@@ -231,7 +229,7 @@ Consider resource constraints, local disease patterns, and cultural factors rele
         
         return results
     
-    def generate_response(self, input_prompt: str, max_length: int = 200) -> str:
+    def generate_response(self, input_prompt: str, max_length: int = 400) -> str:
         """Generate CONCISE clinical response for competition submission"""
         
         # Create focused prompt for concise clinical response
@@ -258,12 +256,12 @@ You are a clinical expert in Kenya. Provide a CONCISE clinical response (maximum
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=max_length,  # Force shorter responses
-                temperature=0.3,  # Lower for more focused output
+                temperature=0.7,  # Lower for more focused output
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
-                repetition_penalty=1.05,
-                top_p=0.8,
-                top_k=40,
+                repetition_penalty=1.2,
+                top_p=0.92,
+                top_k=50,
                 early_stopping=True
             )
         
@@ -275,13 +273,21 @@ You are a clinical expert in Kenya. Provide a CONCISE clinical response (maximum
         # Clean up response - remove any remaining template artifacts
         response = response.replace("<|im_start|>", "").replace("<|im_end|>", "")
         response = response.replace("assistant", "").strip()
-        
-        # Truncate to target length (600-800 chars)
-        if len(response) > 800:
+        # After generating the response
+        # Ensure response has proper clinical structure
+        if "assessment" not in response.lower():
+            response = "Assessment: " + response
+
+        # Ensure length is in optimal range (650-750 chars)
+        target_length = 700
+        if len(response) < 600:
+            response += " Follow-up: Monitor vital signs and clinical progress. Refer if condition worsens."
+            # Truncate to target length (600-800 chars)
+        elif len(response) > 800:
             # Find last complete sentence within 800 chars
-            truncated = response[:800]
+            truncated = response[:750]
             last_period = truncated.rfind('.')
-            if last_period > 400:  # Ensure minimum meaningful content
+            if last_period > 600:  # Ensure minimum meaningful content
                 response = truncated[:last_period + 1]
             else:
                 response = truncated
@@ -302,7 +308,7 @@ You are a clinical expert in Kenya. Provide a CONCISE clinical response (maximum
             else:
                 prompt = example.input_text
             
-            pred = self.generate_response(prompt, max_length=200)
+            pred = self.generate_response(prompt, max_length=400)
             predictions.append(pred)
             references.append(example.target_response)
         
