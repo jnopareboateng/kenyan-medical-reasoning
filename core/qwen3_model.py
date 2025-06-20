@@ -222,8 +222,7 @@ Consider resource constraints, local disease patterns, and cultural factors rele
         # Train the model
         logger.info("Starting Qwen-3-0.5B fine-tuning with Unsloth...")
         trainer.train()
-        
-        # Evaluate on validation set if provided
+          # Evaluate on validation set if provided
         results = {"training_stats": []}
         if val_examples:
             rouge_scores = self._evaluate_rouge(val_examples[:10])  # Sample for speed
@@ -232,12 +231,12 @@ Consider resource constraints, local disease patterns, and cultural factors rele
         
         return results
     
-    def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
-        """Generate clinical response using the fine-tuned model"""
+    def generate_response(self, input_prompt: str, max_length: int = 200) -> str:
+        """Generate CONCISE clinical response for competition submission"""
         
-        # Format input for chat template
-        formatted_prompt = f"""<|im_start|>system
-You are Qwen, an expert clinical practitioner specializing in healthcare delivery in Kenya. You have extensive experience working within the Kenyan healthcare system and understand the unique challenges, resource constraints, and cultural considerations. Provide detailed, evidence-based clinical assessments and management plans that are appropriate for the local context.<|im_end|>
+        # Create focused prompt for concise clinical response
+        focused_prompt = f"""<|im_start|>system
+You are a clinical expert in Kenya. Provide a CONCISE clinical response (maximum 600-800 characters). Focus on: diagnosis, immediate management, and key interventions only. No lengthy explanations.<|im_end|>
 <|im_start|>user
 {input_prompt}<|im_end|>
 <|im_start|>assistant
@@ -248,35 +247,44 @@ You are Qwen, an expert clinical practitioner specializing in healthcare deliver
         
         # Tokenize input
         inputs = self.tokenizer(
-            formatted_prompt,
+            focused_prompt,
             return_tensors="pt",
             truncation=True,
-            max_length=1536
+            max_length=1024  # Reduced for faster inference
         ).to(self.device)
         
-        # Generate response
+        # Generate CONCISE response
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=max_length,
-                temperature=0.7,
+                max_new_tokens=max_length,  # Force shorter responses
+                temperature=0.3,  # Lower for more focused output
                 do_sample=True,
                 pad_token_id=self.tokenizer.eos_token_id,
-                repetition_penalty=1.1,
-                top_p=0.9,
-                top_k=50
+                repetition_penalty=1.05,
+                top_p=0.8,
+                top_k=40,
+                early_stopping=True
             )
         
-        # Decode response
-        response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Decode ONLY the new tokens (assistant response)
+        input_length = inputs['input_ids'].shape[1]
+        response_tokens = outputs[0][input_length:]
+        response = self.tokenizer.decode(response_tokens, skip_special_tokens=True).strip()
         
-        # Extract only the assistant's response
-        if "<|im_start|>assistant" in response:
-            response = response.split("<|im_start|>assistant")[-1].strip()
+        # Clean up response - remove any remaining template artifacts
+        response = response.replace("<|im_start|>", "").replace("<|im_end|>", "")
+        response = response.replace("assistant", "").strip()
         
-        # Remove any trailing tokens
-        if "<|im_end|>" in response:
-            response = response.split("<|im_end|>")[0].strip()
+        # Truncate to target length (600-800 chars)
+        if len(response) > 800:
+            # Find last complete sentence within 800 chars
+            truncated = response[:800]
+            last_period = truncated.rfind('.')
+            if last_period > 400:  # Ensure minimum meaningful content
+                response = truncated[:last_period + 1]
+            else:
+                response = truncated
         
         return response
     
