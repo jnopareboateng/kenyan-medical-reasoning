@@ -1,0 +1,38 @@
+model:
+  provider: "unsloth"
+  name: "Llama-3.2-1B-Instruct-bnb-4bit"
+  load_in_4bit: True
+  cache_dir: "./models"
+  max_seq_length: 2048
+
+training:
+  epochs: 3
+  batch_size: 4
+  learning_rate: 0.00002
+
+  # SFTTrainer args
+  sft_config:
+    per_device_train_batch_size: 4
+    gradient_accumulation_steps: 4
+    warmup_steps: 15
+    # max_steps calculated dynamically
+    fp16: False # auto-detected
+    bf16: True # auto-detected
+    logging_steps: 1
+    optim: "adamw_8bit"
+    weight_decay: 0.01
+    lr_scheduler_type: "linear"
+    seed: 3407
+    output_dir: "outputs"
+
+  # LoRA config
+  lora:
+    r: 16
+    target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    lora_alpha: 16
+    lora_dropout: 0
+    bias: "none"
+    use_gradient_checkpointing: "unsloth"
+    random_state: 3407
+    use_rslora: False
+    loftq_config: null
