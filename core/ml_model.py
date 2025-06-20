@@ -517,16 +517,21 @@ class MLPipeline:
             predictions.append(response)
         
         return predictions
-    
     def _save_submission(self, predictions: List[str], filepath: str):
-        """Save predictions as competition submission"""
+        """Save predictions in CORRECT competition format"""
+        
+        # Load test data to get Master_Index values
+        test_df = pd.read_csv(self.paths['data'] / 'test.csv')
+        
+        # Create submission with CORRECT format
         submission_df = pd.DataFrame({
-            'id': range(len(predictions)),
-            'response': predictions
+            'Master_Index': test_df['Master_Index'],  # Use actual Master_Index from test
+            'Clinician': predictions  # Competition expects 'Clinician' column
         })
         
         submission_df.to_csv(filepath, index=False)
-        self.logger.info(f"Submission saved to {filepath}")
+        self.logger.info(f"Submission saved to {filepath} with correct format")
+        self.logger.info(f"Format: Master_Index, Clinician ({len(submission_df)} rows)")
 
 if __name__ == "__main__":
     # Quick test of the ML pipeline
