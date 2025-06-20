@@ -34,7 +34,7 @@ class ClinicalQwen3Model:
     _model_cache = {}
     _tokenizer_cache = {}
     
-    def __init__(self, model_name: str = "Qwen/Qwen2.5-0.5B-Instruct", load_in_4bit: bool = True, 
+    def __init__(self, model_name: str = "Qwen/Qwen3-0.6B", load_in_4bit: bool = True, 
                  cache_dir: str = "./models", force_download: bool = False):
         """Initialize Qwen-3-0.5B with Unsloth for 4-bit quantization"""
         
@@ -74,14 +74,14 @@ class ClinicalQwen3Model:
         # Configure for fine-tuning with LoRA
         self.model = FastLanguageModel.get_peft_model(
             self.model,
-            r=16,  # LoRA rank
+            r=64,  # LoRA rank
             target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-            lora_alpha=16,
-            lora_dropout=0,
-            bias="none",
+            lora_alpha=64,
+            lora_dropout=0.5,
+            bias="lora_only",
             use_gradient_checkpointing="unsloth",
             random_state=3407,
-            use_rslora=False,
+            use_rslora=True,
             loftq_config=None,
         )
         
@@ -234,7 +234,7 @@ Keep response focused, evidence-based, and appropriate for Kenyan healthcare con
         
         # Create focused prompt for concise clinical response
         focused_prompt = f"""<|im_start|>system
-You are a clinical expert in Kenya. Provide a CONCISE clinical response (maximum 600-800 characters). Focus on: diagnosis, immediate management, and key interventions only. No lengthy explanations.<|im_end|>
+You are a clinical expert in Kenya that reasons by thinking step by step and backtracking to better your responses. Provide a CONCISE clinical response (maximum 600-800 characters). Focus on: diagnosis, immediate management, and key interventions only. No lengthy explanations.<|im_end|>
 <|im_start|>user
 {input_prompt}<|im_end|>
 <|im_start|>assistant
