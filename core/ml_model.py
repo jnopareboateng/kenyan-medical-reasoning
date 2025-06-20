@@ -79,18 +79,42 @@ class ClinicalDataset(Dataset):
 class ClinicalT5Model:
     """FLAN-T5-small fine-tuned for clinical reasoning"""
     
-    def __init__(self, model_name: str = "google/flan-t5-small"):
+    # Class-level model cache to prevent re-downloading
+    _model_cache = {}
+    _tokenizer_cache = {}
+    
+    def __init__(self, model_name: str = "google/flan-t5-xl", cache_dir: str = "./models", force_download: bool = False):
         """Initialize the model with FLAN-T5-small (77M params, edge-deployable)"""
         
         self.model_name = model_name
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True)
         
-        logger.info(f"Loading {model_name} on {self.device}")
+        # Create cache key
+        cache_key = f"{model_name}"
         
-        # Load model and tokenizer
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
+        logger.info(f"Loading {model_name} with caching optimization")
+        
+        # Check if model is already in memory cache
+        if not force_download and cache_key in self._model_cache:
+            logger.info("✅ Using cached T5 model from memory")
+            self.model = self._model_cache[cache_key]
+            self.tokenizer = self._tokenizer_cache[cache_key]
+            self.model.to(self.device)
+            return
+        
+        logger.info(f"Downloading/Loading from cache: {model_name}")
+        
+        # Load model and tokenizer with persistent cache
+        self.tokenizer = T5Tokenizer.from_pretrained(model_name, cache_dir=str(self.cache_dir))
+        self.model = T5ForConditionalGeneration.from_pretrained(model_name, cache_dir=str(self.cache_dir))
         self.model.to(self.device)
+        
+        # Cache in memory for subsequent uses
+        self._model_cache[cache_key] = self.model
+        self._tokenizer_cache[cache_key] = self.tokenizer
+        logger.info("✅ T5 Model cached in memory for future use")
         
         # Add special tokens for medical domain
         special_tokens = [
@@ -321,10 +345,10 @@ class ClinicalT5Model:
                 attention_mask=inputs['attention_mask'],
                 max_length=max_length,
                 num_beams=4,
-                length_penalty=0.6,
+                length_penalty=0.5,
                 early_stopping=True,
                 do_sample=True,
-                temperature=0.7,
+                temperature=0.5,
                 top_p=0.9
             )
         
@@ -402,6 +426,30 @@ class ClinicalT5Model:
         
         logger.info("Model quantized for edge deployment")
         return quantized_model
+    
+    def cleanup_model(self):
+        """Clean up model from memory to free resources"""
+        if hasattr(self, 'model') and self.model is not None:
+            del self.model
+            self.model = None
+        if hasattr(self, 'tokenizer') and self.tokenizer is not None:
+            del self.tokenizer
+            self.tokenizer = None
+        
+        # Clear CUDA cache if available
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        logger.info("ClinicalT5Model cleaned up from memory")
+    
+    @classmethod
+    def clear_cache(cls):
+        """Clear all cached models from memory"""
+        cls._model_cache.clear()
+        cls._tokenizer_cache.clear()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        logger.info("All ClinicalT5Model caches cleared")
 
 class MLPipeline:
     """Complete ML pipeline for clinical reasoning"""
