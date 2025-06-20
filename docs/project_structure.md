@@ -15,14 +15,9 @@ kenya-clinical-reasoning-challenge/
 │   ├── SampleSubmission.csv       # Submission template
 │   └── *.csv                      # Other data files
 ├── docs/                          # Documentation and strategy
-│   ├── strategy.md                # Competition strategy
 │   ├── technical_log.md           # Technical decisions
-│   ├── COMPETITION_STRATEGY_PLAN.md
-│   └── PHASE3_EXECUTION_PLAN.md
+│   └── project-structure.md
 ├── scripts/                       # Analysis and utility scripts
-│   ├── quick_analysis.py          # Data analysis
-│   ├── phase1_analysis.py         # Phase 1 script
-│   └── phase2_baseline.py         # Baseline model
 ├── models/                        # Trained models
 ├── results/                       # Results and submissions
 │   └── baseline_submission.csv    # First submission

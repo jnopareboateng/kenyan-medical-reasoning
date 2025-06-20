@@ -39,17 +39,5 @@ kenya-clinical-reasoning-challenge/
 ### Test Data (100 cases)
 - Same structure except no expert responses to predict
 
-## Model Performance Baseline
-- **Approach**: Random Forest + template generation
-- **Features**: Medical indicators, demographics, case complexity
-- **Output**: Basic clinical response templates
-- **Quality**: Functional but amateur-level
-
-## Next Implementation Steps
-1. Expert response pattern analysis
-2. Medical entity extraction pipeline
-3. Advanced model training (Bio-BERT)
-4. Ensemble optimization
-
 ---
 *Implementation Status: Baseline Complete*
