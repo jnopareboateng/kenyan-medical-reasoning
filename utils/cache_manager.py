@@ -19,6 +19,13 @@ class ModelCacheManager:
         
         # Import here to avoid circular imports
         try:
+            from core.ml_model import ClinicalT5Model
+            ClinicalT5Model.clear_cache()
+            logger.info("✅ T5 cache cleared")
+        except ImportError:
+            logger.warning("T5 model not available")
+        
+        try:
             from core.phi4_model import ClinicalPhi4Model
             ClinicalPhi4Model.clear_cache()
             logger.info("✅ Phi-4 cache cleared")
@@ -48,12 +55,12 @@ class ModelCacheManager:
             torch.cuda.ipc_collect()
         
         logger.info("🧹 ALL model caches cleared and memory freed")
-    
     @staticmethod
     def get_cache_info():
         """Get information about current cache usage"""
         
         cache_info = {
+            "t5_cached_models": 0,
             "phi4_cached_models": 0,
             "meditron_cached_models": 0,
             "llama32_cached_models": 0,
@@ -63,6 +70,11 @@ class ModelCacheManager:
         }
         
         # Check each model's cache
+        try:
+            from core.ml_model import ClinicalT5Model
+            cache_info["t5_cached_models"] = len(ClinicalT5Model._model_cache)
+        except ImportError:
+            pass
         try:
             from core.phi4_model import ClinicalPhi4Model
             cache_info["phi4_cached_models"] = len(ClinicalPhi4Model._model_cache)
