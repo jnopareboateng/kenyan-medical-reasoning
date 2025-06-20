@@ -49,3 +49,6 @@ Thumbs.db
 
 # Competition data (if sensitive)
 # data/*.csv
+*.pyc
+*.csv
+
