@@ -37,14 +37,27 @@ class ModelCacheManager:
             ClinicalMeditronModel.clear_cache()
             logger.info("✅ Meditron cache cleared")
         except ImportError:
-            logger.warning("Meditron model not available")
-        
+            logger.warning("Meditron model not available")        
         try:
             from core.llama32_model import ClinicalLlama32Model
             ClinicalLlama32Model.clear_cache()
             logger.info("✅ Llama-3.2 cache cleared")
         except ImportError:
             logger.warning("Llama-3.2 model not available")
+        
+        try:
+            from core.qwen3_model import ClinicalQwen3Model
+            ClinicalQwen3Model.clear_cache()
+            logger.info("✅ Qwen-3 cache cleared")
+        except ImportError:
+            logger.warning("Qwen-3 model not available")
+        
+        try:
+            from core.qwen3_model import ClinicalQwen3Model
+            ClinicalQwen3Model.clear_cache()
+            logger.info("✅ Qwen-3 cache cleared")
+        except ImportError:
+            logger.warning("Qwen-3 model not available")
         
         # Force garbage collection
         gc.collect()
@@ -58,12 +71,12 @@ class ModelCacheManager:
     @staticmethod
     def get_cache_info():
         """Get information about current cache usage"""
-        
         cache_info = {
             "t5_cached_models": 0,
             "phi4_cached_models": 0,
             "meditron_cached_models": 0,
             "llama32_cached_models": 0,
+            "qwen3_cached_models": 0,
             "total_cached_models": 0,
             "gpu_memory_allocated": 0.0,
             "gpu_memory_reserved": 0.0
@@ -86,17 +99,24 @@ class ModelCacheManager:
             cache_info["meditron_cached_models"] = len(ClinicalMeditronModel._model_cache)
         except ImportError:
             pass
-        
         try:
             from core.llama32_model import ClinicalLlama32Model
             cache_info["llama32_cached_models"] = len(ClinicalLlama32Model._model_cache)
         except ImportError:
             pass
         
+        try:
+            from core.qwen3_model import ClinicalQwen3Model
+            cache_info["qwen3_cached_models"] = len(ClinicalQwen3Model._model_cache)
+        except ImportError:
+            pass
+        
         cache_info["total_cached_models"] = (
+            cache_info["t5_cached_models"] + 
             cache_info["phi4_cached_models"] + 
             cache_info["meditron_cached_models"] + 
-            cache_info["llama32_cached_models"]
+            cache_info["llama32_cached_models"] +
+            cache_info["qwen3_cached_models"]
         )
         
         # GPU memory info
@@ -111,11 +131,12 @@ class ModelCacheManager:
         """Print detailed cache status for debugging"""
         
         info = ModelCacheManager.get_cache_info()
-        
         print("🔍 MODEL CACHE STATUS:")
+        print(f"  T5 models cached: {info['t5_cached_models']}")
         print(f"  Phi-4 models cached: {info['phi4_cached_models']}")
         print(f"  Meditron models cached: {info['meditron_cached_models']}")
         print(f"  Llama-3.2 models cached: {info['llama32_cached_models']}")
+        print(f"  Qwen-3 models cached: {info['qwen3_cached_models']}")
         print(f"  Total models in memory: {info['total_cached_models']}")
         
         if torch.cuda.is_available():
