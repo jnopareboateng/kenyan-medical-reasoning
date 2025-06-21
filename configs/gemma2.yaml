@@ -1,6 +1,6 @@
 model:
   provider: "google"
-  name: "gemma-2-2b-it"
+  name: "unsloth/gemma-2-2b-it-bnb-4bit"
   load_in_4bit: True
   cache_dir: "./models"
   max_seq_length: 2048
@@ -45,4 +45,4 @@ dpo_training:
   warmup_steps: 10
   learning_rate: 0.0000008  # 8e-7 - much lower than SFT
   beta: 0.15  # DPO beta parameter for preference strength
-  sft_model_path: "models/google_gemma-2-2b-it_finetuned"  # Path to SFT model to load
+  sft_model_path: "unsloth/gemma-3-1b-it-unsloth-bnb-4bit"  # Path to SFT model to load

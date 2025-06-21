@@ -1,6 +1,6 @@
 model:
   provider: "Qwen"
-  name: "Qwen3-0.6B"
+  name: "unsloth/Qwen2.5-0.5B-Instruct-bnb-4bit"
   load_in_4bit: True
   cache_dir: "./models"
   max_seq_length: 2048
@@ -48,4 +48,4 @@ dpo_training:
   warmup_steps: 5
   learning_rate: 0.0000005  # 5e-7 - much lower than SFT
   beta: 0.1  # DPO beta parameter for preference strength
-  sft_model_path: "models/Qwen_Qwen3-0.6B_finetuned"  # Path to SFT model to load
+  sft_model_path: "unsloth/Qwen3-0.6B-unsloth-bnb-4bit"  # Path to SFT model to load
