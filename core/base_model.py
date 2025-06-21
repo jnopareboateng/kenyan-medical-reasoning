@@ -128,6 +128,7 @@ class BaseUnslothModel:
                 'precompute_ref_log_probs': False,
                 'model_adapter_name': None,
                 'ref_adapter_name': None,
+                'reference_free': True,  # Use reference-free DPO for clinical reasoning
             }
             
             for attr_name, attr_value in compatibility_attrs.items():
@@ -177,6 +178,7 @@ class BaseUnslothModel:
                 'precompute_ref_log_probs': False,
                 'model_adapter_name': None,
                 'ref_adapter_name': None,
+                'reference_free': True,  # Use reference-free DPO for clinical reasoning
             }
             
             for attr_name, attr_value in compatibility_attrs.items():
