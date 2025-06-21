@@ -19,6 +19,11 @@ class BaseUnslothModel:
         self.model_config = config['model']
         self.training_config = config['training']
         self.model_name = self.model_config['name']
+
+        model_output_dir = self.config.get('model_output_dir', 'models')
+        self.sft_model_path = Path(model_output_dir) / f"{self.model_name.replace('/', '_')}_sft"
+        self.dpo_model_path = Path(model_output_dir) / f"{self.model_name.replace('/', '_')}_dpo"
+
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.logger = CompetitionLogger(self.__class__.__name__)
         
@@ -90,40 +95,16 @@ class BaseUnslothModel:
     def dpo_fine_tune(self, dpo_dataset: Dataset):
         """Fine-tune the model using Direct Preference Optimization (DPO)."""
         
-        dpo_config = self.config['dpo_training']
         self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
-
-        # Create training arguments with proper DPO configuration
-        training_args = TrainingArguments(
-            per_device_train_batch_size=dpo_config.get('batch_size', 1),
-            gradient_accumulation_steps=dpo_config.get('gradient_accumulation_steps', 8),
-            warmup_steps=dpo_config.get('warmup_steps', 5),
-            learning_rate=dpo_config.get('learning_rate', 5e-7),
-            num_train_epochs=dpo_config.get('epochs', 2),
-            fp16=not torch.cuda.is_bf16_supported(),
-            bf16=torch.cuda.is_bf16_supported(),
-            logging_steps=1,
-            optim="adamw_8bit",
-            weight_decay=0.01,
-            lr_scheduler_type="linear",
-            seed=3407,
-            output_dir="outputs/dpo",
-            remove_unused_columns=False,
-            dataloader_pin_memory=False,
-            report_to=None,  # Disable wandb/tensorboard
-            save_strategy="no",  # Don't save checkpoints during DPO
-        )
 
         dpo_epochs = self.config.get('dpo_epochs', 1)
         dpo_learning_rate = self.config.get('dpo_learning_rate', 5e-7)
         dpo_beta = self.config.get('dpo_beta', 0.1)
 
         try:
-            self.logger.info(f"Starting DPO fine-tuning for {self.config['model_name']}...")
-            
             # Define DPO training arguments
             dpo_args = TrainingArguments(
-                output_dir=self.dpo_model_path,
+                output_dir=str(self.dpo_model_path),
                 num_train_epochs=dpo_epochs,
                 per_device_train_batch_size=self.config.get('dpo_batch_size', 1),
                 gradient_accumulation_steps=self.config.get('dpo_gradient_accumulation_steps', 4),
@@ -167,7 +148,7 @@ class BaseUnslothModel:
             self.logger.info("Attempting DPO training with minimal configuration...")
             
             dpo_args_simple = TrainingArguments(
-                output_dir=f"{self.dpo_model_path}_fallback",
+                output_dir=f"{str(self.dpo_model_path)}_fallback",
                 num_train_epochs=1,
                 per_device_train_batch_size=1,
                 gradient_accumulation_steps=1,
