@@ -144,7 +144,6 @@ class BaseUnslothModel:
                 warmup_ratio=0.1,
                 report_to="none",
                 use_liger_kernel=True,  # FIXED: Correct attribute name
-                disable_dropout=True,  # Disable dropout for DPO
             )
             
             # Add missing attributes to arguments for compatibility
@@ -176,6 +175,7 @@ class BaseUnslothModel:
                 tokenizer=self.tokenizer,
                 max_length=self.config.get("dpo_max_seq_length", 1024),
                 max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
+                disable_dropout=True,  # Disable dropout for DPO
             )
 
             # Train the model
