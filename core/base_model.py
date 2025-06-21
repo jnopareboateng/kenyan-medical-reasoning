@@ -143,7 +143,6 @@ class BaseUnslothModel:
                 optim="adamw_torch",
                 warmup_ratio=0.1,
                 report_to="none",
-                use_liger_kernel=True,  # FIXED: Correct attribute name
             )
             
             # Add missing attributes to arguments for compatibility
@@ -160,8 +159,6 @@ class BaseUnslothModel:
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
                 "disable_dropout": True,  # FIX: Add missing attribute for DPO
-                "use_liger_kernel": True,  # FIXED: Correct attribute name
-                "use_liger_loss": True,  # Use Liger loss for DPO
 
             }
 
