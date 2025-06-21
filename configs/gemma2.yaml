@@ -1,36 +1,36 @@
 model:
-  provider: "unsloth"
-  name: "Llama-3.2-1B-Instruct-bnb-4bit"
+  provider: "google"
+  name: "gemma-2-2b-it"
   load_in_4bit: True
   cache_dir: "./models"
   max_seq_length: 2048
 
 training:
-  epochs: 3
-  batch_size: 4
+  epochs: 4
+  batch_size: 2
   learning_rate: 0.00002
 
   # SFTTrainer args
   sft_config:
-    per_device_train_batch_size: 4
-    gradient_accumulation_steps: 4
-    warmup_steps: 15
+    per_device_train_batch_size: 2
+    gradient_accumulation_steps: 6
+    warmup_steps: 20
     # max_steps calculated dynamically
     fp16: False # auto-detected
     bf16: True # auto-detected
     logging_steps: 1
     optim: "adamw_8bit"
     weight_decay: 0.01
-    lr_scheduler_type: "linear"
+    lr_scheduler_type: "cosine"
     seed: 3407
     output_dir: "outputs"
 
   # LoRA config
   lora:
-    r: 16
+    r: 32
     target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    lora_alpha: 16
-    lora_dropout: 0
+    lora_alpha: 32
+    lora_dropout: 0.1
     bias: "none"
     use_gradient_checkpointing: "unsloth"
     random_state: 3407
@@ -39,10 +39,10 @@ training:
 
 # DPO Training Configuration
 dpo_training:
-  epochs: 2
+  epochs: 3
   batch_size: 1
-  gradient_accumulation_steps: 8
-  warmup_steps: 5
-  learning_rate: 0.000001  # 1e-6 - much lower than SFT
-  beta: 0.2  # DPO beta parameter for preference strength
-  sft_model_path: "models/unsloth_Llama-3.2-1B-Instruct-bnb-4bit_finetuned"  # Path to SFT model to load
+  gradient_accumulation_steps: 12
+  warmup_steps: 10
+  learning_rate: 0.0000008  # 8e-7 - much lower than SFT
+  beta: 0.15  # DPO beta parameter for preference strength
+  sft_model_path: "models/google_gemma-2-2b-it_finetuned"  # Path to SFT model to load
