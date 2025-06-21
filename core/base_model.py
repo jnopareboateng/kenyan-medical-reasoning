@@ -159,6 +159,7 @@ class BaseUnslothModel:
                 "model_adapter_name": None,
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
+                "disable_dropout": True,  # FIX: Add missing attribute for DPO
             }
 
             for attr_name, attr_value in compatibility_attrs.items():
@@ -175,7 +176,7 @@ class BaseUnslothModel:
                 tokenizer=self.tokenizer,
                 max_length=self.config.get("dpo_max_seq_length", 1024),
                 max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
-                disable_dropout=True,  # Disable dropout for DPO
+                # disable_dropout=True,  # Disable dropout for DPO
             )
 
             # Train the model
@@ -211,6 +212,7 @@ class BaseUnslothModel:
                 "model_adapter_name": None,
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
+                "disable_dropout": True,  # FIX: Add missing attribute for DPO
             }
 
             for attr_name, attr_value in compatibility_attrs.items():
