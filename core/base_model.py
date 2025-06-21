@@ -1,7 +1,7 @@
 import torch
 from unsloth import FastLanguageModel
-from transformers import SFTConfig
-from trl import SFTTrainer, DPOTrainer
+from trl import SFTTrainer, DPOTrainer, SFTConfig
+from transformers import TrainingArguments
 from datasets import Dataset
 from typing import List, Dict
 from pathlib import Path
@@ -92,13 +92,11 @@ class BaseUnslothModel:
         """Fine-tune the model using Direct Preference Optimization (DPO)."""
         
         dpo_config = self.config['dpo_training']
-        self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
-
-        # Initialize the DPOTrainer
+        self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")        # Initialize the DPOTrainer
         dpo_trainer = DPOTrainer(
             model=self.model,
             ref_model=None,  # Unsloth handles the reference model automatically
-            args=SFTConfig(
+            args=TrainingArguments(
                 per_device_train_batch_size=dpo_config['batch_size'],
                 gradient_accumulation_steps=dpo_config['gradient_accumulation_steps'],
                 warmup_steps=dpo_config['warmup_steps'],
@@ -112,6 +110,8 @@ class BaseUnslothModel:
                 lr_scheduler_type="linear",
                 seed=3407,
                 output_dir="outputs/dpo",
+                remove_unused_columns=False,
+                dataloader_pin_memory=False,
             ),
             beta=dpo_config['beta'],
             train_dataset=dpo_dataset,
