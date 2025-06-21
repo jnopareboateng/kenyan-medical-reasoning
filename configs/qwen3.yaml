@@ -6,46 +6,43 @@ model:
   max_seq_length: 2048
 
 training:
-  epochs: 3
+  epochs: 3  # Reduced from 4 to prevent overfitting
   batch_size: 2
-  learning_rate: 1e-7
-  # lr_scheduler: "cosine_with_restarts"
-  # weight_decay: 0.01
-  # warmup_ratio: 0.1
+  learning_rate: 3e-6  # Slightly reduced from 5e-6 for stability
   
   # SFTTrainer args
   sft_config:
     per_device_train_batch_size: 2
-    gradient_accumulation_steps: 4
-    warmup_steps: 10
+    gradient_accumulation_steps: 6  # Increased from 4 for better gradient stability
+    warmup_steps: 15  # Increased from 10 for better warmup
     # max_steps calculated dynamically in script
     fp16: False # auto-detected
     bf16: True # auto-detected
     logging_steps: 1
     optim: "adamw_8bit"
     weight_decay: 0.01
-    lr_scheduler_type: "linear"
+    lr_scheduler_type: "cosine"
     seed: 3407
     output_dir: "outputs"
 
   # LoRA config
   lora:
-    r: 8
+    r: 16
     target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    lora_alpha: 8
-    lora_dropout: 0
+    lora_alpha: 32  # Maintaining 2:1 ratio with r=16
+    lora_dropout: 0.1
     bias: "none"
     use_gradient_checkpointing: "unsloth"
     random_state: 3407
-    use_rslora: False
+    use_rslora: True
     loftq_config: null
 
 # DPO Training Configuration
 dpo_training:
-  epochs: 2
+  epochs: 1  # Reduced from 2 as per best practice
   batch_size: 1
   gradient_accumulation_steps: 8
   warmup_steps: 5
-  learning_rate: 0.0000005  # 5e-7 - much lower than SFT
-  beta: 0.1  # DPO beta parameter for preference strength
-  sft_model_path: "models/Qwen_unsloth_Qwen2.5-0.5B-Instruct-bnb-4bit_finetuned"  # Path to SFT model to load
+  learning_rate: 0.0000006  # 6e-7 - 5x lower than SFT
+  beta: 0.1  # Standard beta value
+  sft_model_path: "models/Qwen_unsloth_Qwen3-0.6B-bnb-4bit_finetuned"  # Path to SFT model to load

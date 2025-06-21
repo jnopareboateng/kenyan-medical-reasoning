@@ -8,41 +8,41 @@ model:
 training:
   epochs: 3
   batch_size: 4
-  learning_rate: 0.00002
+  learning_rate: 8e-6  # Reduced from 1e-5 for better stability
 
   # SFTTrainer args
   sft_config:
     per_device_train_batch_size: 4
     gradient_accumulation_steps: 4
-    warmup_steps: 15
+    warmup_steps: 20  # Increased from 15 for better warmup
     # max_steps calculated dynamically
     fp16: False # auto-detected
     bf16: True # auto-detected
     logging_steps: 1
     optim: "adamw_8bit"
     weight_decay: 0.01
-    lr_scheduler_type: "linear"
+    lr_scheduler_type: "cosine"
     seed: 3407
     output_dir: "outputs"
 
   # LoRA config
   lora:
-    r: 16
+    r: 32
     target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    lora_alpha: 16
-    lora_dropout: 0
+    lora_alpha: 64  # Maintaining 2:1 ratio with r=32
+    lora_dropout: 0.1
     bias: "none"
     use_gradient_checkpointing: "unsloth"
     random_state: 3407
-    use_rslora: False
+    use_rslora: True
     loftq_config: null
 
 # DPO Training Configuration
 dpo_training:
-  epochs: 2
-  batch_size: 1
+  epochs: 1  # Reduced from 2 as per best practice
+  batch_size: 2
   gradient_accumulation_steps: 8
   warmup_steps: 5
-  learning_rate: 0.000001  # 1e-6 - much lower than SFT
-  beta: 0.2  # DPO beta parameter for preference strength
+  learning_rate: 1.6e-6  # 1.6e-6 - 5x lower than SFT
+  beta: 0.1  # Standard beta value
   sft_model_path: "models/unsloth_unsloth_Llama-3.2-1B-Instruct-bnb-4bit_finetuned"  # Path to SFT model to load

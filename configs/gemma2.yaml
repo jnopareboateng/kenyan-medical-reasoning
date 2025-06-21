@@ -6,15 +6,15 @@ model:
   max_seq_length: 2048
 
 training:
-  epochs: 4
+  epochs: 3  # Reduced from 4 to prevent overfitting
   batch_size: 2
-  learning_rate: 0.00002
+  learning_rate: 1e-5  # Reduced from 2e-5 for stability
 
   # SFTTrainer args
   sft_config:
     per_device_train_batch_size: 2
     gradient_accumulation_steps: 6
-    warmup_steps: 20
+    warmup_steps: 25  # Increased from 20 for better warmup
     # max_steps calculated dynamically
     fp16: False # auto-detected
     bf16: True # auto-detected
@@ -27,22 +27,22 @@ training:
 
   # LoRA config
   lora:
-    r: 32
+    r: 64  # Increased from 32 for 2B model capacity
     target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    lora_alpha: 32
+    lora_alpha: 128  # Maintaining 2:1 ratio with r=64
     lora_dropout: 0.1
     bias: "none"
     use_gradient_checkpointing: "unsloth"
     random_state: 3407
-    use_rslora: False
+    use_rslora: True  # Changed from False to True for better training
     loftq_config: null
 
 # DPO Training Configuration
 dpo_training:
-  epochs: 3
+  epochs: 1  # Reduced from 3 as per best practice
   batch_size: 1
   gradient_accumulation_steps: 12
-  warmup_steps: 10
-  learning_rate: 0.0000008  # 8e-7 - much lower than SFT
-  beta: 0.15  # DPO beta parameter for preference strength
+  warmup_steps: 5  # Reduced from 10 for simpler warmup
+  learning_rate: 2e-6  # 2e-6 - 5x lower than SFT (improved from 8e-7)
+  beta: 0.1  # Reduced from 0.15 to standard value
   sft_model_path: "unsloth/google_unsloth_gemma-2-2b-it-bnb-4bit_finetuned"  # Path to SFT model to load
