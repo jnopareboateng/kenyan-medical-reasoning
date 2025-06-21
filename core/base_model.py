@@ -7,6 +7,14 @@ from typing import List, Dict
 from pathlib import Path
 from rouge_score import rouge_scorer
 
+# Try to import DPOConfig for proper DPO configuration
+try:
+    from trl import DPOConfig
+    DPO_CONFIG_AVAILABLE = True
+except ImportError:
+    DPO_CONFIG_AVAILABLE = False
+    print("⚠️ DPOConfig not available in this TRL version - using TrainingArguments fallback")
+
 from utils.logger import CompetitionLogger
 from core.ml_model import ClinicalExample
 
@@ -129,6 +137,7 @@ class BaseUnslothModel:
                 'model_adapter_name': None,
                 'ref_adapter_name': None,
                 'reference_free': True,  # Use reference-free DPO for clinical reasoning
+                'disable_dropout': False,  # Latest compatibility fix for disable_dropout error
             }
             
             for attr_name, attr_value in compatibility_attrs.items():
@@ -179,6 +188,7 @@ class BaseUnslothModel:
                 'model_adapter_name': None,
                 'ref_adapter_name': None,
                 'reference_free': True,  # Use reference-free DPO for clinical reasoning
+                'disable_dropout': False,  # Latest compatibility fix for disable_dropout error
             }
             
             for attr_name, attr_value in compatibility_attrs.items():
