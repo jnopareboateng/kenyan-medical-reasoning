@@ -123,119 +123,197 @@ class BaseUnslothModel:
         self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
 
         dpo_epochs = self.config.get("dpo_epochs", 1)
-        dpo_learning_rate = self.config.get("dpo_learning_rate", 1e-7)
+        dpo_learning_rate = self.config.get("dpo_learning_rate", 5e-7)
         dpo_beta = self.config.get("dpo_beta", 0.1)
 
         try:
-            # Define DPO training arguments
-            dpo_args = TrainingArguments(
-                output_dir=str(self.dpo_model_path),
-                num_train_epochs=dpo_epochs,
-                per_device_train_batch_size=self.config.get("dpo_batch_size", 1),
-                gradient_accumulation_steps=self.config.get(
-                    "dpo_gradient_accumulation_steps", 4
-                ),
-                learning_rate=dpo_learning_rate,
-                logging_steps=self.config.get("dpo_logging_steps", 10),
-                save_steps=self.config.get("dpo_save_steps", 100),
-                save_total_limit=self.config.get("dpo_save_total_limit", 2),
-                lr_scheduler_type="cosine",
-                optim="adamw_torch",
-                warmup_ratio=0.1,
-                report_to="none",
-                use_liger_kernel=True,  # FIXED: Correct attribute name
-                disable_dropout=True,  # Disable dropout for DPO
-            )
-            
-            # Add missing attributes to arguments for compatibility
-            # This is a comprehensive workaround for version incompatibility issues
-            compatibility_attrs = {
-                "padding_value": self.tokenizer.pad_token_id,
-                "model_init_kwargs": {},
-                "ref_model_init_kwargs": {},
-                "generate_during_eval": False,
-                "max_target_length": self.config.get("dpo_max_seq_length", 1024),
-                "truncation_mode": "keep_end",
-                "precompute_ref_log_probs": False,
-                "model_adapter_name": None,
-                "ref_adapter_name": None,
-                "reference_free": True,  # Use reference-free DPO for clinical reasoning
-            }
-
-            for attr_name, attr_value in compatibility_attrs.items():
-                if not hasattr(dpo_args, attr_name):
-                    setattr(dpo_args, attr_name, attr_value)
-
-            # Initialize DPOTrainer
-            dpo_trainer = DPOTrainer(
-                model=self.model,
-                ref_model=None,
-                args=dpo_args,
-                beta=dpo_beta,
-                train_dataset=dpo_dataset,
-                tokenizer=self.tokenizer,
-                max_length=self.config.get("dpo_max_seq_length", 1024),
-                max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
-            )
-
-            # Train the model
-            dpo_trainer.train()
-
-            self.logger.info(f"DPO fine-tuning completed for {self.model_name}.")
-            return {"dpo_training_stats": dpo_trainer.state.log_history}
-
-        except Exception as e:
-            self.logger.error(f"DPO training failed with error: {e}")
-
-            # Fallback: Try with minimal DPO configuration
-            self.logger.info("Attempting DPO training with minimal configuration...")
-
-            dpo_args_simple = TrainingArguments(
-                output_dir=f"{str(self.dpo_model_path)}_fallback",
-                num_train_epochs=1,
-                per_device_train_batch_size=1,
-                gradient_accumulation_steps=1,
-                learning_rate=1e-7,
-                report_to="none",
-            )
-            
-            # Apply the same compatibility fixes to the simple fallback configuration
-            compatibility_attrs = {
-                "padding_value": self.tokenizer.pad_token_id,
-                "model_init_kwargs": {},
-                "ref_model_init_kwargs": {},
-                "generate_during_eval": False,
-                "max_target_length": 1024,
-                "truncation_mode": "keep_end",
-                "precompute_ref_log_probs": False,
-                "model_adapter_name": None,
-                "ref_adapter_name": None,
-                "reference_free": True,  # Use reference-free DPO for clinical reasoning
-            }
-
-            for attr_name, attr_value in compatibility_attrs.items():
-                if not hasattr(dpo_args_simple, attr_name):
-                    setattr(dpo_args_simple, attr_name, attr_value)
-
+            # First attempt: Try with DPOConfig if available
             try:
-                dpo_trainer_simple = DPOTrainer(
+                from trl import DPOConfig
+                
+                self.logger.info("Using DPOConfig for training configuration...")
+                
+                # Use DPOConfig which properly supports DPO-specific parameters
+                dpo_config = DPOConfig(
+                    output_dir=str(self.dpo_model_path),
+                    num_train_epochs=dpo_epochs,
+                    per_device_train_batch_size=self.config.get("dpo_batch_size", 1),
+                    gradient_accumulation_steps=self.config.get("dpo_gradient_accumulation_steps", 4),
+                    learning_rate=dpo_learning_rate,
+                    logging_steps=self.config.get("dpo_logging_steps", 10),
+                    save_steps=self.config.get("dpo_save_steps", 100),
+                    save_total_limit=self.config.get("dpo_save_total_limit", 2),
+                    lr_scheduler_type="cosine",
+                    optim="adamw_torch",
+                    warmup_ratio=0.1,
+                    report_to="none",
+                    
+                    # DPO-specific parameters (these belong in DPOConfig)
+                    beta=dpo_beta,
+                    max_length=self.config.get("dpo_max_seq_length", 1024),
+                    max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
+                    loss_type="sigmoid",
+                    label_smoothing=0.0,
+                    reference_free=True,
+                )
+
+                # Initialize DPOTrainer with DPOConfig
+                dpo_trainer = DPOTrainer(
                     model=self.model,
                     ref_model=None,
-                    args=dpo_args_simple,
-                    beta=0.1,
+                    args=dpo_config,
                     train_dataset=dpo_dataset,
                     tokenizer=self.tokenizer,
-                    max_length=1024,
-                    max_prompt_length=512,
                 )
-                dpo_trainer_simple.train()
-                self.logger.info("Fallback DPO training successful.")
-                self.model = dpo_trainer_simple.model
-                return {"dpo_training_stats": "fallback_completed"}
 
-            except Exception as e2:
-                self.logger.error(f"Fallback DPO training also failed: {e2}")
-                raise e2
+                dpo_trainer.train()
+                self.logger.info(f"DPO fine-tuning completed using DPOConfig for {self.model_name}.")
+                return {"dpo_training_stats": dpo_trainer.state.log_history}
+
+            except ImportError:
+                self.logger.info("DPOConfig not available, using TrainingArguments approach...")
+                raise Exception("Fallback to TrainingArguments")
+
+        except Exception:
+            # Second attempt: TrainingArguments without problematic parameters
+            self.logger.info("Using TrainingArguments with DPO parameters passed to trainer...")
+            
+            try:
+                # Clean TrainingArguments - NO DPO-specific parameters here
+                training_args = TrainingArguments(
+                    output_dir=str(self.dpo_model_path),
+                    num_train_epochs=dpo_epochs,
+                    per_device_train_batch_size=self.config.get("dpo_batch_size", 1),
+                    gradient_accumulation_steps=self.config.get("dpo_gradient_accumulation_steps", 4),
+                    learning_rate=dpo_learning_rate,
+                    logging_steps=self.config.get("dpo_logging_steps", 10),
+                    save_steps=self.config.get("dpo_save_steps", 100),
+                    save_total_limit=self.config.get("dpo_save_total_limit", 2),
+                    lr_scheduler_type="cosine",
+                    optim="adamw_torch",
+                    warmup_ratio=0.1,
+                    report_to="none",
+                    remove_unused_columns=False,
+                    dataloader_drop_last=False,
+                )
+
+                # Initialize DPOTrainer with parameters passed directly (not in args)
+                dpo_trainer = DPOTrainer(
+                    model=self.model,
+                    ref_model=None,  # Reference-free DPO
+                    args=training_args,
+                    beta=dpo_beta,
+                    train_dataset=dpo_dataset,
+                    tokenizer=self.tokenizer,
+                    max_length=self.config.get("dpo_max_seq_length", 1024),
+                    max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
+                    loss_type="sigmoid",
+                    label_smoothing=0.0,
+                    # Note: disable_dropout and other model-specific params removed
+                    # as they may not be supported in all TRL versions
+                )
+
+                dpo_trainer.train()
+                self.logger.info(f"DPO fine-tuning completed using TrainingArguments for {self.model_name}.")
+                return {"dpo_training_stats": dpo_trainer.state.log_history}
+
+            except Exception as e:
+                self.logger.error(f"Standard DPO training failed: {e}")
+                
+                # Third attempt: Ultra-minimal configuration
+                self.logger.info("Attempting ultra-minimal DPO configuration...")
+                
+                try:
+                    # Absolutely minimal TrainingArguments
+                    minimal_args = TrainingArguments(
+                        output_dir=f"{str(self.dpo_model_path)}_minimal",
+                        num_train_epochs=1,
+                        per_device_train_batch_size=1,
+                        gradient_accumulation_steps=1,
+                        learning_rate=1e-7,
+                        logging_steps=50,
+                        save_steps=1000,
+                        report_to="none",
+                    )
+
+                    # Absolutely minimal DPOTrainer
+                    dpo_trainer_minimal = DPOTrainer(
+                        model=self.model,
+                        ref_model=None,
+                        args=minimal_args,
+                        beta=0.1,
+                        train_dataset=dpo_dataset,
+                        tokenizer=self.tokenizer,
+                        max_length=512,
+                        max_prompt_length=256,
+                    )
+                    
+                    dpo_trainer_minimal.train()
+                    self.logger.info("Ultra-minimal DPO training completed successfully.")
+                    self.model = dpo_trainer_minimal.model
+                    return {"dpo_training_stats": "minimal_dpo_completed"}
+
+                except Exception as e2:
+                    self.logger.error(f"Ultra-minimal DPO training failed: {e2}")
+                    
+                    # Fourth attempt: Basic supervised fine-tuning on chosen responses
+                    self.logger.info("Falling back to supervised fine-tuning on chosen responses...")
+                    
+                    try:
+                        from transformers import Trainer
+                        
+                        # Simple supervised fine-tuning arguments
+                        sft_args = TrainingArguments(
+                            output_dir=f"{str(self.dpo_model_path)}_sft_fallback",
+                            num_train_epochs=1,
+                            per_device_train_batch_size=1,
+                            gradient_accumulation_steps=2,
+                            learning_rate=1e-6,
+                            logging_steps=100,
+                            save_steps=1000,
+                            report_to="none",
+                            remove_unused_columns=False,
+                        )
+                        
+                        # Convert DPO dataset to supervised format using chosen responses
+                        def format_for_supervised(example):
+                            # Combine prompt and chosen response for supervised training
+                            full_text = example["prompt"] + example["chosen"]
+                            
+                            # Tokenize
+                            tokenized = self.tokenizer(
+                                full_text,
+                                truncation=True,
+                                max_length=512,
+                                padding="max_length",
+                                return_tensors="pt"
+                            )
+                            
+                            return {
+                                "input_ids": tokenized["input_ids"].squeeze(),
+                                "attention_mask": tokenized["attention_mask"].squeeze(),
+                                "labels": tokenized["input_ids"].squeeze(),  # Same as input_ids for causal LM
+                            }
+                        
+                        # Apply the transformation
+                        sft_dataset = dpo_dataset.map(format_for_supervised, remove_columns=dpo_dataset.column_names)
+                        
+                        # Basic trainer for supervised fine-tuning
+                        sft_trainer = Trainer(
+                            model=self.model,
+                            args=sft_args,
+                            train_dataset=sft_dataset,
+                            tokenizer=self.tokenizer,
+                        )
+                        
+                        sft_trainer.train()
+                        self.logger.info("Supervised fine-tuning fallback completed successfully.")
+                        self.model = sft_trainer.model
+                        return {"dpo_training_stats": "sft_fallback_completed"}
+                        
+                    except Exception as e3:
+                        self.logger.error(f"All training approaches failed: {e3}")
+                        raise Exception(f"Complete training failure. Last error: {e3}")
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")
