@@ -10,11 +10,13 @@ from utils.logger import CompetitionLogger
 from utils.paths import get_project_paths, load_config
 from core.qwen3_model import ClinicalQwen3Model
 from core.llama32_model import ClinicalLlama32Model
+from core.gemma2_model import ClinicalGemma2Model
 
 # Model mapping
 MODEL_MAPPING = {
     "Qwen3": ClinicalQwen3Model,
     "Llama32": ClinicalLlama32Model,
+    "google": ClinicalGemma2Model,
 }
 
 def main(config_path: str):

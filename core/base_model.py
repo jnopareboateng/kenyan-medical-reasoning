@@ -1,8 +1,7 @@
-
 import torch
 from unsloth import FastLanguageModel
 from transformers import SFTConfig
-from trl import SFTTrainer
+from trl import SFTTrainer, DPOTrainer
 from datasets import Dataset
 from typing import List, Dict
 from pathlib import Path
@@ -88,6 +87,44 @@ class BaseUnslothModel:
             self.logger.info(f"Validation ROUGE-L: {rouge_scores['rougeL']:.4f}")
         
         return results
+
+    def dpo_fine_tune(self, dpo_dataset: Dataset):
+        """Fine-tune the model using Direct Preference Optimization (DPO)."""
+        
+        dpo_config = self.config['dpo_training']
+        self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
+
+        # Initialize the DPOTrainer
+        dpo_trainer = DPOTrainer(
+            model=self.model,
+            ref_model=None,  # Unsloth handles the reference model automatically
+            args=SFTConfig(
+                per_device_train_batch_size=dpo_config['batch_size'],
+                gradient_accumulation_steps=dpo_config['gradient_accumulation_steps'],
+                warmup_steps=dpo_config['warmup_steps'],
+                learning_rate=dpo_config['learning_rate'],
+                num_train_epochs=dpo_config['epochs'],
+                fp16=not torch.cuda.is_bf16_supported(),
+                bf16=torch.cuda.is_bf16_supported(),
+                logging_steps=1,
+                optim="adamw_8bit",
+                weight_decay=0.01,
+                lr_scheduler_type="linear",
+                seed=3407,
+                output_dir="outputs/dpo",
+            ),
+            beta=dpo_config['beta'],
+            train_dataset=dpo_dataset,
+            tokenizer=self.tokenizer,
+            max_prompt_length=self.model_config['max_seq_length'],
+            max_length=self.model_config['max_seq_length'] * 2, # Accommodate prompt, chosen, and rejected
+        )
+
+        # Train the model
+        dpo_trainer.train()
+
+        self.logger.info(f"DPO fine-tuning completed for {self.model_name}.")
+        return {"dpo_training_stats": dpo_trainer.state.log_history}
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")

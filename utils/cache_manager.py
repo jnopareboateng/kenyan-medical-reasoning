@@ -39,26 +39,26 @@ class ModelCacheManager:
         except ImportError:
             logger.warning("Meditron model not available")        
         try:
-            from core.llama32_model import ClinicalLlama32Model
-            ClinicalLlama32Model.clear_cache()
-            logger.info("✅ Llama-3.2 cache cleared")
+                from core.llama32_model import ClinicalLlama32Model
+                ClinicalLlama32Model.clear_cache()
+                logger.info("✅ Llama-3.2 cache cleared")
         except ImportError:
-            logger.warning("Llama-3.2 model not available")
-        
+                logger.warning("Llama-3.2 model not available")
+            
+        try:
+                from core.qwen3_model import ClinicalQwen3Model
+                ClinicalQwen3Model.clear_cache()
+                logger.info("✅ Qwen-3 cache cleared")
+        except ImportError:
+                logger.warning("Qwen-3 model not available")
+            
         try:
             from core.qwen3_model import ClinicalQwen3Model
             ClinicalQwen3Model.clear_cache()
             logger.info("✅ Qwen-3 cache cleared")
         except ImportError:
             logger.warning("Qwen-3 model not available")
-        
-        try:
-            from core.qwen3_model import ClinicalQwen3Model
-            ClinicalQwen3Model.clear_cache()
-            logger.info("✅ Qwen-3 cache cleared")
-        except ImportError:
-            logger.warning("Qwen-3 model not available")
-        
+    
         # Force garbage collection
         gc.collect()
         
