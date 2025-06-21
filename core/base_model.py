@@ -160,6 +160,9 @@ class BaseUnslothModel:
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
                 "disable_dropout": True,  # FIX: Add missing attribute for DPO
+                "use_liger_kernel": True,  # FIXED: Correct attribute name
+                "use_liger_loss": True,  # Use Liger loss for DPO
+
             }
 
             for attr_name, attr_value in compatibility_attrs.items():
