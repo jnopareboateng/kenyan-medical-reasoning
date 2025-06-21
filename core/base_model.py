@@ -85,46 +85,90 @@ class BaseUnslothModel:
             rouge_scores = self._evaluate_rouge(val_examples[:10])
             results["validation_rouge"] = rouge_scores
             self.logger.info(f"Validation ROUGE-L: {rouge_scores['rougeL']:.4f}")
-        
         return results
-
+        
     def dpo_fine_tune(self, dpo_dataset: Dataset):
         """Fine-tune the model using Direct Preference Optimization (DPO)."""
         
         dpo_config = self.config['dpo_training']
-        self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")        # Initialize the DPOTrainer
-        dpo_trainer = DPOTrainer(
-            model=self.model,
-            ref_model=None,  # Unsloth handles the reference model automatically
-            args=TrainingArguments(
-                per_device_train_batch_size=dpo_config['batch_size'],
-                gradient_accumulation_steps=dpo_config['gradient_accumulation_steps'],
-                warmup_steps=dpo_config['warmup_steps'],
-                learning_rate=dpo_config['learning_rate'],
-                num_train_epochs=dpo_config['epochs'],
-                fp16=not torch.cuda.is_bf16_supported(),
-                bf16=torch.cuda.is_bf16_supported(),
-                logging_steps=1,
-                optim="adamw_8bit",
-                weight_decay=0.01,
-                lr_scheduler_type="linear",
-                seed=3407,
-                output_dir="outputs/dpo",
-                remove_unused_columns=False,
-                dataloader_pin_memory=False,
-            ),
-            beta=dpo_config['beta'],
-            train_dataset=dpo_dataset,
-            tokenizer=self.tokenizer,
-            max_prompt_length=self.model_config['max_seq_length'],
-            max_length=self.model_config['max_seq_length'] * 2, # Accommodate prompt, chosen, and rejected
+        self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
+
+        # Create training arguments with proper DPO configuration
+        training_args = TrainingArguments(
+            per_device_train_batch_size=dpo_config.get('batch_size', 1),
+            gradient_accumulation_steps=dpo_config.get('gradient_accumulation_steps', 8),
+            warmup_steps=dpo_config.get('warmup_steps', 5),
+            learning_rate=dpo_config.get('learning_rate', 5e-7),
+            num_train_epochs=dpo_config.get('epochs', 2),
+            fp16=not torch.cuda.is_bf16_supported(),
+            bf16=torch.cuda.is_bf16_supported(),
+            logging_steps=1,
+            optim="adamw_8bit",
+            weight_decay=0.01,
+            lr_scheduler_type="linear",
+            seed=3407,
+            output_dir="outputs/dpo",
+            remove_unused_columns=False,
+            dataloader_pin_memory=False,
+            report_to=None,  # Disable wandb/tensorboard
+            save_strategy="no",  # Don't save checkpoints during DPO
         )
 
-        # Train the model
-        dpo_trainer.train()
+        try:
+            # Initialize the DPOTrainer with compatible parameters
+            dpo_trainer = DPOTrainer(
+                model=self.model,
+                ref_model=None,  # Unsloth handles the reference model automatically
+                args=training_args,
+                beta=dpo_config.get('beta', 0.1),
+                train_dataset=dpo_dataset,
+                tokenizer=self.tokenizer,
+                max_length=min(self.model_config['max_seq_length'], 1024),  # Conservative max length
+                max_prompt_length=min(self.model_config['max_seq_length'] // 2, 512),
+            )
 
-        self.logger.info(f"DPO fine-tuning completed for {self.model_name}.")
-        return {"dpo_training_stats": dpo_trainer.state.log_history}
+            # Train the model
+            dpo_trainer.train()
+
+            self.logger.info(f"DPO fine-tuning completed for {self.model_name}.")
+            return {"dpo_training_stats": dpo_trainer.state.log_history}
+            
+        except Exception as e:
+            self.logger.error(f"DPO training failed with error: {e}")
+            
+            # Fallback: Try with minimal DPO configuration
+            self.logger.info("Attempting DPO training with minimal configuration...")
+            
+            try:
+                # Simplified DPO trainer for compatibility
+                simple_args = TrainingArguments(
+                    per_device_train_batch_size=1,
+                    gradient_accumulation_steps=8,
+                    num_train_epochs=1,  # Reduced epochs for fallback
+                    learning_rate=1e-7,  # Very conservative
+                    logging_steps=10,
+                    output_dir="outputs/dpo_simple",
+                    remove_unused_columns=False,
+                    dataloader_pin_memory=False,
+                    report_to=None,
+                    save_strategy="no",
+                )
+                
+                dpo_trainer_simple = DPOTrainer(
+                    model=self.model,
+                    args=simple_args,
+                    beta=0.1,
+                    train_dataset=dpo_dataset,
+                    tokenizer=self.tokenizer,
+                )
+                
+                dpo_trainer_simple.train()
+                self.logger.info("DPO training completed with fallback configuration.")
+                return {"dpo_training_stats": "fallback_completed"}
+                
+            except Exception as e2:
+                self.logger.error(f"Fallback DPO training also failed: {e2}")
+                raise e2
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")

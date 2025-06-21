@@ -1,14 +1,14 @@
 model:
   provider: "Qwen"
-  name: "unsloth/Qwen2.5-0.5B-Instruct-bnb-4bit"
+  name: "unsloth/Qwen3-0.6B-unsloth-bnb-4bit"
   load_in_4bit: True
   cache_dir: "./models"
   max_seq_length: 2048
 
 training:
-  epochs: 5
+  epochs: 3
   batch_size: 2
-  learning_rate: 0.00001
+  learning_rate: 1e-7
   # lr_scheduler: "cosine_with_restarts"
   # weight_decay: 0.01
   # warmup_ratio: 0.1
@@ -30,14 +30,14 @@ training:
 
   # LoRA config
   lora:
-    r: 64
+    r: 8
     target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
-    lora_alpha: 64
-    lora_dropout: 0.5
-    bias: "lora_only"
+    lora_alpha: 8
+    lora_dropout: 0
+    bias: "none"
     use_gradient_checkpointing: "unsloth"
     random_state: 3407
-    use_rslora: True
+    use_rslora: False
     loftq_config: null
 
 # DPO Training Configuration
