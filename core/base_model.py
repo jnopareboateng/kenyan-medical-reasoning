@@ -117,14 +117,13 @@ class BaseUnslothModel:
             results["validation_rouge"] = rouge_scores
             self.logger.info(f"Validation ROUGE-L: {rouge_scores['rougeL']:.4f}")
         return results
-
     def dpo_fine_tune(self, dpo_dataset: Dataset):
         """Fine-tune the model using Direct Preference Optimization (DPO)."""
 
         self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
 
         dpo_epochs = self.config.get("dpo_epochs", 1)
-        dpo_learning_rate = self.config.get("dpo_learning_rate", 5e-7)
+        dpo_learning_rate = self.config.get("dpo_learning_rate", 1e-7)
         dpo_beta = self.config.get("dpo_beta", 0.1)
 
         try:
@@ -144,7 +143,11 @@ class BaseUnslothModel:
                 optim="adamw_torch",
                 warmup_ratio=0.1,
                 report_to="none",
-            )  # Add missing attributes to arguments for compatibility
+                use_liger_kernel=True,  # FIXED: Correct attribute name
+                disable_dropout=True,  # Disable dropout for DPO
+            )
+            
+            # Add missing attributes to arguments for compatibility
             # This is a comprehensive workaround for version incompatibility issues
             compatibility_attrs = {
                 "padding_value": self.tokenizer.pad_token_id,
@@ -157,8 +160,6 @@ class BaseUnslothModel:
                 "model_adapter_name": None,
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
-                "disable_dropout": False,  # Latest compatibility fix for disable_dropout error
-                "use_linger_loss": False,
             }
 
             for attr_name, attr_value in compatibility_attrs.items():
@@ -196,7 +197,9 @@ class BaseUnslothModel:
                 gradient_accumulation_steps=1,
                 learning_rate=1e-7,
                 report_to="none",
-            )  # Apply the same compatibility fixes to the simple fallback configuration
+            )
+            
+            # Apply the same compatibility fixes to the simple fallback configuration
             compatibility_attrs = {
                 "padding_value": self.tokenizer.pad_token_id,
                 "model_init_kwargs": {},
@@ -208,32 +211,31 @@ class BaseUnslothModel:
                 "model_adapter_name": None,
                 "ref_adapter_name": None,
                 "reference_free": True,  # Use reference-free DPO for clinical reasoning
-                "disable_dropout": False,  # Latest compatibility fix for disable_dropout error
-                "use_linger_loss": False,
             }
 
             for attr_name, attr_value in compatibility_attrs.items():
                 if not hasattr(dpo_args_simple, attr_name):
                     setattr(dpo_args_simple, attr_name, attr_value)
 
-            dpo_trainer_simple = DPOTrainer(
-                model=self.model,
-                ref_model=None,
-                args=dpo_args_simple,
-                beta=0.1,
-                train_dataset=dpo_dataset,
-                tokenizer=self.tokenizer,
-                max_length=1024,
-                max_prompt_length=512,
-            )
-            dpo_trainer_simple.train()
-            self.logger.info("Fallback DPO training successful.")
-            self.model = dpo_trainer_simple.model
-            return {"dpo_training_stats": "fallback_completed"}
+            try:
+                dpo_trainer_simple = DPOTrainer(
+                    model=self.model,
+                    ref_model=None,
+                    args=dpo_args_simple,
+                    beta=0.1,
+                    train_dataset=dpo_dataset,
+                    tokenizer=self.tokenizer,
+                    max_length=1024,
+                    max_prompt_length=512,
+                )
+                dpo_trainer_simple.train()
+                self.logger.info("Fallback DPO training successful.")
+                self.model = dpo_trainer_simple.model
+                return {"dpo_training_stats": "fallback_completed"}
 
-        except Exception as e2:
-            self.logger.error(f"Fallback DPO training also failed: {e2}")
-            raise e2
+            except Exception as e2:
+                self.logger.error(f"Fallback DPO training also failed: {e2}")
+                raise e2
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")
