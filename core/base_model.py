@@ -190,6 +190,7 @@ class BaseUnslothModel:
                 'ref_adapter_name': None,
                 'reference_free': True,  # Use reference-free DPO for clinical reasoning
                 'disable_dropout': False,  # Latest compatibility fix for disable_dropout error
+                'use_linga_loss': False
             }
             
             for attr_name, attr_value in compatibility_attrs.items():
