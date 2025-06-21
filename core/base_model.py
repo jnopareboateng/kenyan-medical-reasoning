@@ -116,12 +116,23 @@ class BaseUnslothModel:
                 optim="adamw_torch",
                 warmup_ratio=0.1,
                 report_to="none",
-            )
-              # Add missing attributes to arguments for compatibility
-            # This is a workaround for version incompatibility issues
-            setattr(dpo_args, 'padding_value', self.tokenizer.pad_token_id)
-            setattr(dpo_args, 'model_init_kwargs', {})
-            setattr(dpo_args, 'ref_model_init_kwargs', {})
+            )            # Add missing attributes to arguments for compatibility
+            # This is a comprehensive workaround for version incompatibility issues
+            compatibility_attrs = {
+                'padding_value': self.tokenizer.pad_token_id,
+                'model_init_kwargs': {},
+                'ref_model_init_kwargs': {},
+                'generate_during_eval': False,
+                'max_target_length': self.config.get('dpo_max_seq_length', 1024),
+                'truncation_mode': 'keep_end',
+                'precompute_ref_log_probs': False,
+                'model_adapter_name': None,
+                'ref_adapter_name': None,
+            }
+            
+            for attr_name, attr_value in compatibility_attrs.items():
+                if not hasattr(dpo_args, attr_name):
+                    setattr(dpo_args, attr_name, attr_value)
 
 
             # Initialize DPOTrainer
@@ -155,10 +166,22 @@ class BaseUnslothModel:
                 gradient_accumulation_steps=1,
                 learning_rate=1e-7,
                 report_to="none",
-            )
-            setattr(dpo_args_simple, 'padding_value', self.tokenizer.pad_token_id)
-            setattr(dpo_args_simple, 'model_init_kwargs', {})
-            setattr(dpo_args_simple, 'ref_model_init_kwargs', {})
+            )            # Apply the same compatibility fixes to the simple fallback configuration
+            compatibility_attrs = {
+                'padding_value': self.tokenizer.pad_token_id,
+                'model_init_kwargs': {},
+                'ref_model_init_kwargs': {},
+                'generate_during_eval': False,
+                'max_target_length': 1024,
+                'truncation_mode': 'keep_end',
+                'precompute_ref_log_probs': False,
+                'model_adapter_name': None,
+                'ref_adapter_name': None,
+            }
+            
+            for attr_name, attr_value in compatibility_attrs.items():
+                if not hasattr(dpo_args_simple, attr_name):
+                    setattr(dpo_args_simple, attr_name, attr_value)
 
             dpo_trainer_simple = DPOTrainer(
                 model=self.model,
