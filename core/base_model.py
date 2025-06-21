@@ -86,78 +86,73 @@ class BaseUnslothModel:
             results["validation_rouge"] = rouge_scores
             self.logger.info(f"Validation ROUGE-L: {rouge_scores['rougeL']:.4f}")
         return results
+        
     def dpo_fine_tune(self, dpo_dataset: Dataset):
         """Fine-tune the model using Direct Preference Optimization (DPO)."""
         
         dpo_config = self.config['dpo_training']
         self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
 
-        # Use DPOConfig instead of TrainingArguments for unsloth compatibility
-        try:
-            from trl import DPOConfig
-            
-            training_args = DPOConfig(
-                per_device_train_batch_size=dpo_config.get('batch_size', 1),
-                gradient_accumulation_steps=dpo_config.get('gradient_accumulation_steps', 8),
-                warmup_steps=dpo_config.get('warmup_steps', 5),
-                learning_rate=dpo_config.get('learning_rate', 5e-7),
-                num_train_epochs=dpo_config.get('epochs', 2),
-                bf16=torch.cuda.is_bf16_supported(),
-                logging_steps=1,
-                optim="adamw_8bit",
-                weight_decay=0.01,
-                lr_scheduler_type="linear",
-                seed=3407,
-                output_dir="outputs/dpo",
-                remove_unused_columns=False,
-                dataloader_pin_memory=False,
-                report_to=None,  # Disable wandb/tensorboard
-                save_strategy="no",  # Don't save checkpoints during DPO
-                beta=dpo_config.get('beta', 0.1),  # Beta parameter for DPO
-                max_length=1024,
-                max_prompt_length=512,
-                padding_value=self.tokenizer.pad_token_id if hasattr(self.tokenizer, 'pad_token_id') else 0,
-            )
-            
-        except ImportError:
-            # Fallback to TrainingArguments if DPOConfig is not available
-            self.logger.warning("DPOConfig not available, using TrainingArguments")
-            training_args = TrainingArguments(
-                per_device_train_batch_size=dpo_config.get('batch_size', 1),
-                gradient_accumulation_steps=dpo_config.get('gradient_accumulation_steps', 8),
-                warmup_steps=dpo_config.get('warmup_steps', 5),
-                learning_rate=dpo_config.get('learning_rate', 5e-7),
-                num_train_epochs=dpo_config.get('epochs', 2),
-                fp16=not torch.cuda.is_bf16_supported(),
-                bf16=torch.cuda.is_bf16_supported(),
-                logging_steps=1,
-                optim="adamw_8bit",
-                weight_decay=0.01,
-                lr_scheduler_type="linear",
-                seed=3407,
-                output_dir="outputs/dpo",
-                remove_unused_columns=False,
-                dataloader_pin_memory=False,
-                report_to=None,
-                save_strategy="no",
-            )
+        # Create training arguments with proper DPO configuration
+        training_args = TrainingArguments(
+            per_device_train_batch_size=dpo_config.get('batch_size', 1),
+            gradient_accumulation_steps=dpo_config.get('gradient_accumulation_steps', 8),
+            warmup_steps=dpo_config.get('warmup_steps', 5),
+            learning_rate=dpo_config.get('learning_rate', 5e-7),
+            num_train_epochs=dpo_config.get('epochs', 2),
+            fp16=not torch.cuda.is_bf16_supported(),
+            bf16=torch.cuda.is_bf16_supported(),
+            logging_steps=1,
+            optim="adamw_8bit",
+            weight_decay=0.01,
+            lr_scheduler_type="linear",
+            seed=3407,
+            output_dir="outputs/dpo",
+            remove_unused_columns=False,
+            dataloader_pin_memory=False,
+            report_to=None,  # Disable wandb/tensorboard
+            save_strategy="no",  # Don't save checkpoints during DPO
+        )
+
+        dpo_epochs = self.config.get('dpo_epochs', 1)
+        dpo_learning_rate = self.config.get('dpo_learning_rate', 5e-7)
+        dpo_beta = self.config.get('dpo_beta', 0.1)
 
         try:
-            # Initialize the DPOTrainer with minimal parameters for unsloth compatibility
-            dpo_trainer_kwargs = {
-                "model": self.model,
-                "args": training_args,
-                "train_dataset": dpo_dataset,
-                "processing_class": self.tokenizer,  # Use processing_class instead of tokenizer
-            }
+            self.logger.info(f"Starting DPO fine-tuning for {self.config['model_name']}...")
             
-            # Only add DPO-specific parameters if NOT using DPOConfig
-            if 'DPOConfig' not in str(type(training_args)):
-                dpo_trainer_kwargs["beta"] = dpo_config.get('beta', 0.1)
-                dpo_trainer_kwargs["max_length"] = 1024
-                dpo_trainer_kwargs["max_prompt_length"] = 512
+            # Define DPO training arguments
+            dpo_args = TrainingArguments(
+                output_dir=self.dpo_model_path,
+                num_train_epochs=dpo_epochs,
+                per_device_train_batch_size=self.config.get('dpo_batch_size', 1),
+                gradient_accumulation_steps=self.config.get('dpo_gradient_accumulation_steps', 4),
+                learning_rate=dpo_learning_rate,
+                logging_steps=self.config.get('dpo_logging_steps', 10),
+                save_steps=self.config.get('dpo_save_steps', 100),
+                save_total_limit=self.config.get('dpo_save_total_limit', 2),
+                lr_scheduler_type='cosine',
+                optim="adamw_torch",
+                warmup_ratio=0.1,
+                report_to="none",
+            )
             
-            dpo_trainer = DPOTrainer(**dpo_trainer_kwargs)
+            # Add padding_value to arguments, since it is not a standard attribute
+            # This is a workaround for a potential version incompatibility issue
+            setattr(dpo_args, 'padding_value', self.tokenizer.pad_token_id)
+
+
+            # Initialize DPOTrainer
+            dpo_trainer = DPOTrainer(
+                model=self.model,
+                ref_model=None,
+                args=dpo_args,
+                beta=dpo_beta,
+                train_dataset=dpo_dataset,
+                tokenizer=self.tokenizer,
+                max_length=self.config.get('dpo_max_seq_length', 1024),
+                max_prompt_length=self.config.get('dpo_max_prompt_length', 512),
+            )
 
             # Train the model
             dpo_trainer.train()
@@ -168,40 +163,37 @@ class BaseUnslothModel:
         except Exception as e:
             self.logger.error(f"DPO training failed with error: {e}")
             
-            # Fallback: Try with even more minimal configuration
-            self.logger.info("Attempting DPO training with ultra-minimal configuration...")
+            # Fallback: Try with minimal DPO configuration
+            self.logger.info("Attempting DPO training with minimal configuration...")
             
-            try:
-                # Most minimal DPO trainer possible
-                simple_args = TrainingArguments(
-                    per_device_train_batch_size=1,
-                    gradient_accumulation_steps=4,
-                    num_train_epochs=1,
-                    learning_rate=1e-7,
-                    logging_steps=5,
-                    output_dir="outputs/dpo_minimal",
-                    report_to=None,
-                    save_strategy="no",
-                    remove_unused_columns=False,
-                )
+            dpo_args_simple = TrainingArguments(
+                output_dir=f"{self.dpo_model_path}_fallback",
+                num_train_epochs=1,
+                per_device_train_batch_size=1,
+                gradient_accumulation_steps=1,
+                learning_rate=1e-7,
+                report_to="none",
+            )
+            setattr(dpo_args_simple, 'padding_value', self.tokenizer.pad_token_id)
+
+            dpo_trainer_simple = DPOTrainer(
+                model=self.model,
+                ref_model=None,
+                args=dpo_args_simple,
+                beta=0.1,
+                train_dataset=dpo_dataset,
+                tokenizer=self.tokenizer,
+                max_length=1024,
+                max_prompt_length=512,
+            )
+            dpo_trainer_simple.train()
+            self.logger.info("Fallback DPO training successful.")
+            self.model = dpo_trainer_simple.model
+            return {"dpo_training_stats": "fallback_completed"}
                 
-                # Try with absolute minimal parameters
-                dpo_trainer_simple = DPOTrainer(
-                    model=self.model,
-                    args=simple_args,
-                    train_dataset=dpo_dataset,
-                    processing_class=self.tokenizer,
-                )
-                
-                dpo_trainer_simple.train()
-                self.logger.info("DPO training completed with ultra-minimal configuration.")
-                return {"dpo_training_stats": "minimal_completed"}
-                
-            except Exception as e2:
-                self.logger.error(f"Fallback DPO training also failed: {e2}")
-                # Instead of raising, return None to allow pipeline to continue
-                self.logger.warning("DPO training failed completely. Continuing with SFT model only.")
-                return None
+        except Exception as e2:
+            self.logger.error(f"Fallback DPO training also failed: {e2}")
+            raise e2
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")
