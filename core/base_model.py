@@ -116,70 +116,87 @@ class BaseUnslothModel:
             rouge_scores = self._evaluate_rouge(val_examples[:10])
             results["validation_rouge"] = rouge_scores
             self.logger.info(f"Validation ROUGE-L: {rouge_scores['rougeL']:.4f}")
-        return results
+        return results    
     def dpo_fine_tune(self, dpo_dataset: Dataset):
-        """Fine-tune the model using Direct Preference Optimization (DPO)."""
+        """Fine-tune the model using Direct Preference Optimization (DPO) with enhanced compatibility."""
 
         self.logger.info(f"Starting DPO fine-tuning for {self.model_name}...")
 
-        dpo_epochs = self.config.get("dpo_epochs", 1)
-        dpo_learning_rate = self.config.get("dpo_learning_rate", 1e-7)
-        dpo_beta = self.config.get("dpo_beta", 0.1)
+        # Use modern compatibility approach - safe parameter extraction
+        dpo_config = {
+            "output_dir": str(self.dpo_model_path),
+            "num_train_epochs": self.config.get("dpo_epochs", 1),
+            "per_device_train_batch_size": self.config.get("dpo_batch_size", 1),
+            "gradient_accumulation_steps": self.config.get("dpo_gradient_accumulation_steps", 4),
+            "learning_rate": self.config.get("dpo_learning_rate", 1e-7),
+            "logging_steps": self.config.get("dpo_logging_steps", 10),
+            "save_steps": self.config.get("dpo_save_steps", 100),
+            "save_total_limit": self.config.get("dpo_save_total_limit", 2),
+            "beta": self.config.get("dpo_beta", 0.1),
+            "max_length": self.config.get("dpo_max_seq_length", 1024),
+            "max_prompt_length": self.config.get("dpo_max_prompt_length", 512),
+        }
 
         try:
-            # Define DPO training arguments
-            dpo_args = TrainingArguments(
-                output_dir=str(self.dpo_model_path),
-                num_train_epochs=dpo_epochs,
-                per_device_train_batch_size=self.config.get("dpo_batch_size", 1),
-                gradient_accumulation_steps=self.config.get(
-                    "dpo_gradient_accumulation_steps", 4
-                ),
-                learning_rate=dpo_learning_rate,
-                logging_steps=self.config.get("dpo_logging_steps", 10),
-                save_steps=self.config.get("dpo_save_steps", 100),
-                save_total_limit=self.config.get("dpo_save_total_limit", 2),
-                lr_scheduler_type="cosine",
-                optim="adamw_torch",
-                warmup_ratio=0.1,
-                report_to="none",
-            )
-            
-            # Add missing attributes to arguments for compatibility
-            # This is a comprehensive workaround for version incompatibility issues
-            compatibility_attrs = {
-                "padding_value": self.tokenizer.pad_token_id,
-                "model_init_kwargs": {},
-                "ref_model_init_kwargs": {},
-                "generate_during_eval": False,
-                "max_target_length": self.config.get("dpo_max_seq_length", 1024),
-                "truncation_mode": "keep_end",
-                "precompute_ref_log_probs": False,
-                "model_adapter_name": None,
-                "ref_adapter_name": None,
-                "reference_free": True,  # Use reference-free DPO for clinical reasoning
-                "disable_dropout": True,  # FIX: Add missing attribute for DPO
+            # Import the compatibility fix if available (from notebook)
+            try:
+                from __main__ import DPOCompatibilityFix
+                self.logger.info("Using DPO compatibility fix from notebook")
+                
+                dpo_trainer = DPOCompatibilityFix.create_dpo_trainer_safe(
+                    model=self.model,
+                    tokenizer=self.tokenizer,
+                    train_dataset=dpo_dataset,
+                    **dpo_config
+                )
+                
+            except ImportError:
+                self.logger.info("Compatibility fix not available, using standard approach")
+                
+                # Fallback to standard TrainingArguments with safe parameters
+                safe_params = {
+                    "output_dir": dpo_config["output_dir"],
+                    "num_train_epochs": dpo_config["num_train_epochs"],
+                    "per_device_train_batch_size": dpo_config["per_device_train_batch_size"],
+                    "gradient_accumulation_steps": dpo_config["gradient_accumulation_steps"],
+                    "learning_rate": dpo_config["learning_rate"],
+                    "logging_steps": dpo_config["logging_steps"],
+                    "save_steps": dpo_config["save_steps"],
+                    "save_total_limit": dpo_config["save_total_limit"],
+                    "lr_scheduler_type": "cosine",
+                    "optim": "adamw_torch",
+                    "warmup_ratio": 0.1,
+                    "report_to": "none",
+                    "remove_unused_columns": False,
+                }
+                
+                dpo_args = TrainingArguments(**safe_params)
+                
+                # Add minimal compatibility attributes
+                essential_attrs = {
+                    "padding_value": getattr(self.tokenizer, 'pad_token_id', -100),
+                    "reference_free": True,
+                    "disable_dropout": True,
+                }
+                
+                for attr_name, attr_value in essential_attrs.items():
+                    if not hasattr(dpo_args, attr_name):
+                        setattr(dpo_args, attr_name, attr_value)
 
-            }
-
-            for attr_name, attr_value in compatibility_attrs.items():
-                if not hasattr(dpo_args, attr_name):
-                    setattr(dpo_args, attr_name, attr_value)
-
-            # Initialize DPOTrainer
-            dpo_trainer = DPOTrainer(
-                model=self.model,
-                ref_model=None,
-                args=dpo_args,
-                beta=dpo_beta,
-                train_dataset=dpo_dataset,
-                tokenizer=self.tokenizer,
-                max_length=self.config.get("dpo_max_seq_length", 1024),
-                max_prompt_length=self.config.get("dpo_max_prompt_length", 512),
-                # disable_dropout=True,  # Disable dropout for DPO
-            )
+                # Initialize DPOTrainer with minimal parameters
+                dpo_trainer = DPOTrainer(
+                    model=self.model,
+                    ref_model=None,  # Reference-free approach
+                    args=dpo_args,
+                    beta=dpo_config["beta"],
+                    train_dataset=dpo_dataset,
+                    tokenizer=self.tokenizer,
+                    max_length=dpo_config["max_length"],
+                    max_prompt_length=dpo_config["max_prompt_length"],
+                )
 
             # Train the model
+            self.logger.info("Starting DPO training...")
             dpo_trainer.train()
 
             self.logger.info(f"DPO fine-tuning completed for {self.model_name}.")
@@ -187,57 +204,23 @@ class BaseUnslothModel:
 
         except Exception as e:
             self.logger.error(f"DPO training failed with error: {e}")
-
-            # Fallback: Try with minimal DPO configuration
-            self.logger.info("Attempting DPO training with minimal configuration...")
-
-            dpo_args_simple = TrainingArguments(
-                output_dir=f"{str(self.dpo_model_path)}_fallback",
-                num_train_epochs=1,
-                per_device_train_batch_size=1,
-                gradient_accumulation_steps=1,
-                learning_rate=1e-7,
-                report_to="none",
-            )
             
-            # Apply the same compatibility fixes to the simple fallback configuration
-            compatibility_attrs = {
-                "padding_value": self.tokenizer.pad_token_id,
-                "model_init_kwargs": {},
-                "ref_model_init_kwargs": {},
-                "generate_during_eval": False,
-                "max_target_length": 1024,
-                "truncation_mode": "keep_end",
-                "precompute_ref_log_probs": False,
-                "model_adapter_name": None,
-                "ref_adapter_name": None,
-                "reference_free": True,  # Use reference-free DPO for clinical reasoning
-                "disable_dropout": True,  # FIX: Add missing attribute for DPO
+            # Enhanced error reporting
+            error_type = type(e).__name__
+            error_message = str(e)
+            
+            if "liger" in error_message.lower():
+                self.logger.info("Liger kernel related error - this is a known compatibility issue")
+            elif "attribute" in error_message.lower() and "TrainingArguments" in error_message:
+                self.logger.info("TrainingArguments compatibility error - version mismatch detected")
+            
+            # Return error details for debugging
+            return {
+                "error": error_message,
+                "error_type": error_type,
+                "status": "failed",
+                "fallback_available": "sft_model_ready"
             }
-
-            for attr_name, attr_value in compatibility_attrs.items():
-                if not hasattr(dpo_args_simple, attr_name):
-                    setattr(dpo_args_simple, attr_name, attr_value)
-
-            try:
-                dpo_trainer_simple = DPOTrainer(
-                    model=self.model,
-                    ref_model=None,
-                    args=dpo_args_simple,
-                    beta=0.1,
-                    train_dataset=dpo_dataset,
-                    tokenizer=self.tokenizer,
-                    max_length=1024,
-                    max_prompt_length=512,
-                )
-                dpo_trainer_simple.train()
-                self.logger.info("Fallback DPO training successful.")
-                self.model = dpo_trainer_simple.model
-                return {"dpo_training_stats": "fallback_completed"}
-
-            except Exception as e2:
-                self.logger.error(f"Fallback DPO training also failed: {e2}")
-                raise e2
 
     def generate_response(self, input_prompt: str, max_length: int = 512) -> str:
         raise NotImplementedError("Subclasses must implement generate_response")
