@@ -117,10 +117,11 @@ class BaseUnslothModel:
                 warmup_ratio=0.1,
                 report_to="none",
             )
-            
-            # Add padding_value to arguments, since it is not a standard attribute
-            # This is a workaround for a potential version incompatibility issue
+              # Add missing attributes to arguments for compatibility
+            # This is a workaround for version incompatibility issues
             setattr(dpo_args, 'padding_value', self.tokenizer.pad_token_id)
+            setattr(dpo_args, 'model_init_kwargs', {})
+            setattr(dpo_args, 'ref_model_init_kwargs', {})
 
 
             # Initialize DPOTrainer
@@ -156,6 +157,8 @@ class BaseUnslothModel:
                 report_to="none",
             )
             setattr(dpo_args_simple, 'padding_value', self.tokenizer.pad_token_id)
+            setattr(dpo_args_simple, 'model_init_kwargs', {})
+            setattr(dpo_args_simple, 'ref_model_init_kwargs', {})
 
             dpo_trainer_simple = DPOTrainer(
                 model=self.model,
